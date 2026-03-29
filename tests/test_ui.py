@@ -89,8 +89,8 @@ class TestDashboardLoads:
     def test_page_title_contains_app_name(self, browser_page: Page):
         """The page title must reference the EHR dashboard."""
         title = browser_page.title()
-        assert "Auto-Auth" in title or "Prior Auth" in title or "EHR" in title, (
-            f"Page title '{title}' does not reference the app"
+        assert "HCC Risk Navigator" in title or "EHR" in title, (
+            f"Page title '{title}' does not reference the app 'HCC Risk Navigator'"
         )
 
     def test_patient_name_tamara_visible(self, browser_page: Page):
@@ -98,25 +98,18 @@ class TestDashboardLoads:
         content = browser_page.content()
         assert "Tamara" in content, "Patient name 'Tamara' not found on dashboard"
 
-    def test_medications_section_visible(self, browser_page: Page):
-        """The medications section must be visible."""
+    def test_current_coded_condition_visible(self, browser_page: Page):
+        """The current coded condition 'E11.9' must be visible."""
         content = browser_page.content()
-        assert "Metformin" in content or "Medication" in content, (
-            "No medication content found on dashboard"
+        assert "E11.9" in content, (
+            "Current coded condition 'E11.9' not found on dashboard"
         )
 
     def test_clinical_notes_section_visible(self, browser_page: Page):
-        """Clinical notes section must be visible."""
+        """Clinical notes section must be visible and contain symptoms."""
         content = browser_page.content()
-        assert "GI intolerance" in content or "Clinical Note" in content or "Progress Note" in content, (
-            "No clinical notes content found on dashboard"
-        )
-
-    def test_a1c_data_visible(self, browser_page: Page):
-        """A1C lab data must appear somewhere on the dashboard."""
-        content = browser_page.content()
-        assert "A1C" in content or "A1c" in content or "Hemoglobin" in content, (
-            "No A1C/lab data found on dashboard"
+        assert "Gabapentin" in content or "Clinical Note" in content or "burning sensation" in content, (
+            "No clinical notes content found on dashboard for neuropathy"
         )
 
 
