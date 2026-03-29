@@ -78,6 +78,7 @@ def mock_llm_gap_response() -> str:
                 ),
                 "raf_delta": 0.302,
                 "confidence": "HIGH",
+                "draft_clinician_query": "Dr. Nakamura, your note mentions burning and gabapentin, but E11.40 is not coded. Do you agree to amend the chart?"
             }
         ],
         "audit_summary": (
@@ -234,3 +235,10 @@ class TestOutputStructure:
             result = audit_hcc_gaps(tamara_fhir_context)
         assert isinstance(result["audit_summary"], str)
         assert len(result["audit_summary"]) > 10
+
+    def test_draft_clinician_query_is_present(self, tamara_fhir_context, mock_llm_gap_response):
+        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
+            result = audit_hcc_gaps(tamara_fhir_context)
+        for gap in result["gaps"]:
+            assert "draft_clinician_query" in gap
+            assert isinstance(gap["draft_clinician_query"], str)

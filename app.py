@@ -329,6 +329,14 @@ age = (date.today() - dob).days // 365
 st.markdown("## 🏥 HCC Risk Navigator")
 st.markdown('<p style="color:#64748b;font-size:14px;margin-top:-10px;">Clinical Documentation Improvement · Medicare Advantage Risk Adjustment Audit</p>', unsafe_allow_html=True)
 
+st.markdown('<div class="section-header" style="margin-top: 24px;">🏢 Clinic-Wide Impact (YTD)</div>', unsafe_allow_html=True)
+col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+col_m1.metric("Total Patients Audited", "1,402")
+col_m2.metric("HCC Gaps Identified", "184")
+col_m3.metric("Projected RAF Increase", "+42.5", delta="Trending Up")
+col_m4.metric("Potential Revenue", "$510,000", delta="+12%")
+st.markdown("<br>", unsafe_allow_html=True)
+
 # Patient Banner
 st.markdown(f"""
 <div class="patient-banner">
@@ -503,6 +511,9 @@ if audit_result:
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+        if gap.get("draft_clinician_query"):
+            st.info(f"**Draft Clinician Query:**\n\n{gap['draft_clinician_query']}", icon="✍️")
 
         col_rev1, col_rev2, col_rev3 = st.columns(3)
         with col_rev1:

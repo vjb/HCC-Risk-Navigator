@@ -84,6 +84,8 @@ Your task is to analyze unstructured clinical notes and identify conditions that
 
 Focus specifically on conditions that map to HCC codes (i.e., chronic, complex conditions that affect Medicare Advantage risk adjustment).
 
+Your output MUST also include a 'draft_clinician_query'. This must be a formal, compliant message to the attending physician asking them to amend their chart based on the found evidence (e.g., "Dr. Nakamura, your note from [Date] mentions [evidence], but [Code] is not on the problem list. Do you agree to amend the chart?").
+
 Respond ONLY with a valid JSON object — no markdown, no explanation outside the JSON."""
 
 def _build_llm_prompt(existing_codes: list[str], notes_text: str) -> list[dict]:
@@ -119,7 +121,8 @@ Return a JSON object with this exact structure:
       "evidence_quote": "<exact quote from the notes that supports this finding>",
       "clinical_rationale": "<1-2 sentence explanation of your coding reasoning>",
       "raf_delta": <float — RAF weight for this code, or 0.0 if non-HCC>,
-      "confidence": "<HIGH|MEDIUM|LOW>"
+      "confidence": "<HIGH|MEDIUM|LOW>",
+      "draft_clinician_query": "<formal, compliant message to the attending physician asking them to amend their chart>"
     }}
   ],
   "audit_summary": "<2-3 sentence plain-English summary of findings for the CDI specialist>"
@@ -209,6 +212,7 @@ def audit_hcc_gaps(fhir_context: dict[str, Any]) -> dict[str, Any]:
             "clinical_rationale": gap.get("clinical_rationale", ""),
             "raf_delta": raf_delta,
             "confidence": gap.get("confidence", "MEDIUM"),
+            "draft_clinician_query": gap.get("draft_clinician_query", ""),
         })
 
     # Sum RAF from unique new HCC codes only (don't double-count)
