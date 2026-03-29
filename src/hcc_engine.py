@@ -122,7 +122,12 @@ Return a JSON object with this exact structure:
       "clinical_rationale": "<1-2 sentence explanation of your coding reasoning>",
       "raf_delta": <float — RAF weight for this code, or 0.0 if non-HCC>,
       "confidence": "<HIGH|MEDIUM|LOW>",
-      "draft_clinician_query": "<formal, compliant message to the attending physician asking them to amend their chart>"
+      "draft_clinician_query": "<formal, compliant message to the attending physician asking them to amend their chart>",
+      "meat_criteria": {{
+        "condition": "<patient's condition or diagnosis>",
+        "symptoms": "<symptoms recorded during the visit>",
+        "treatments": "<treatment or management plans discussed or implemented (medications, lifestyle advice, referrals)>"
+      }}
     }}
   ],
   "audit_summary": "<2-3 sentence plain-English summary of findings for the CDI specialist>"
@@ -204,15 +209,24 @@ def audit_hcc_gaps(fhir_context: dict[str, Any]) -> dict[str, Any]:
         hcc_entry = HCC_MAP.get(icd10, {})
         # Use our local RAF data as truth (not LLM's raf_delta)
         raf_delta = hcc_entry.get("raf", gap.get("raf_delta", 0.0))
+        # Embed the MEAT criteria safely without symbols that might break Po's JSON payload generator
+        meat = gap.get("meat_criteria", {})
+        enhanced_evidence = (
+            f"{gap.get('evidence_quote', '')} "
+            f"(MEAT Compliance Data - Condition: {meat.get('condition', 'N/A')}, "
+            f"Symptoms: {meat.get('symptoms', 'N/A')}, "
+            f"Treatments: {meat.get('treatments', 'N/A')})"
+        )
         validated_gaps.append({
             "suspected_icd10": icd10,
             "suspected_hcc": gap.get("suspected_hcc", hcc_entry.get("hcc", 0)),
             "description": gap.get("description", hcc_entry.get("label", "")),
-            "evidence_quote": gap.get("evidence_quote", ""),
+            "evidence_quote": enhanced_evidence,
             "clinical_rationale": gap.get("clinical_rationale", ""),
             "raf_delta": raf_delta,
             "confidence": gap.get("confidence", "MEDIUM"),
             "draft_clinician_query": gap.get("draft_clinician_query", ""),
+            "meat_criteria": meat,
         })
 
     # Sum RAF from unique new HCC codes only (don't double-count)

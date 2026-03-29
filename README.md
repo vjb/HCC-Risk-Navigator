@@ -143,8 +143,13 @@ Analyze a patient's FHIR chart for uncoded Hierarchical Condition Categories (HC
       "uncoded_description": "Type 2 diabetes mellitus with diabetic neuropathy",
       "hcc_category": 18,
       "raf_weight": 0.302,
-      "clinical_evidence_quote": "worsening numbness and a burning sensation in both feet... Gabapentin 300mg",
-      "rationale": "Patient is actively treated for diabetic neuropathy with Gabapentin, but only generic diabetes E11.9 is coded."
+      "clinical_evidence_quote": "worsening numbness and a burning sensation in both feet... Gabapentin 300mg (MEAT Compliance Data - Condition: Diabetic Peripheral Neuropathy, Symptoms: Worsening numbness, Treatments: Gabapentin 300mg)",
+      "rationale": "Patient is actively treated for diabetic neuropathy with Gabapentin, but only generic diabetes E11.9 is coded.",
+      "meat_criteria": {
+        "condition": "Diabetic Peripheral Neuropathy",
+        "symptoms": "Worsening numbness and a burning sensation in both feet",
+        "treatments": "Gabapentin 300mg"
+      }
     }
   ],
   "message": "Audit complete."
