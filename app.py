@@ -1,33 +1,23 @@
 """
-app.py — HCC Risk Navigator Mock EHR Dashboard
-================================================
-Streamlit UI that displays:
-  1. Tamara's patient banner (Medicare Advantage, age 68)
-  2. Current coded problem list with HCC codes and RAF weights
-  3. Aggregated current RAF score
-  4. Clinical notes viewer with the HCC gap evidence highlighted
-  5. "Run HCC Audit" button → calls the REST API → displays the gap report
+app.py — HCC Risk Navigator Mock EHR Dashboard (Light Enterprise Theme)
 """
 import os
-import time
 import json
-import requests
 import streamlit as st
-import pandas as pd
-from sqlalchemy.orm import Session
+from datetime import date
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Page config (must be first Streamlit call)
+# Page config
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="HCC Risk Navigator | Mock EHR",
-    page_icon="🏥",
+    page_title="HCC Risk Navigator",
+    page_icon="⚕️",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Styling
+# Premium Light Theme CSS
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -35,505 +25,308 @@ st.markdown("""
 
 html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
+    background-color: #f8fafc; /* Very soft cool gray background */
+    color: #0f172a; /* Slate 900 for high-contrast text */
 }
 
-/* Dark clinical theme */  
-.stApp {
-    background: #0a0e1a;
-    color: #e2e8f0;
+/* Hide Streamlit default branding */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* Global Card Styling */
+.glass-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    margin-bottom: 20px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.glass-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
 }
 
-/* Patient banner */
+/* CFO Header Metrics */
+.metric-value {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.metric-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.text-blue { color: #2563eb; }
+.text-green { color: #059669; }
+.text-purple { color: #7c3aed; }
+
+/* Patient Banner */
 .patient-banner {
-    background: linear-gradient(135deg, #1a2035 0%, #0f172a 100%);
-    border: 1px solid #2d3748;
-    border-left: 4px solid #3b82f6;
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    color: white;
     border-radius: 12px;
     padding: 20px 28px;
     margin-bottom: 24px;
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
 }
-
-.patient-name {
-    font-size: 26px;
-    font-weight: 700;
-    color: #f1f5f9;
-    margin: 0 0 4px 0;
-}
-
-.patient-meta {
-    font-size: 14px;
-    color: #94a3b8;
-    margin: 0;
-}
-
+.patient-name { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+.patient-meta { font-size: 15px; color: #bfdbfe; font-weight: 400; }
 .ins-badge {
-    background: #1e3a5f;
-    color: #60a5fa;
-    border: 1px solid #2563eb;
-    border-radius: 6px;
-    padding: 3px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-/* Section headers */
-.section-header {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 4px 12px;
+    border-radius: 20px;
     font-size: 13px;
     font-weight: 600;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    margin-bottom: 12px;
+    backdrop-filter: blur(4px);
+}
+
+/* Section Headers */
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+    border-bottom: 2px solid #f1f5f9;
     padding-bottom: 8px;
-    border-bottom: 1px solid #1e293b;
-}
-
-/* RAF score card */
-.raf-card {
-    background: #111827;
-    border: 1px solid #1e293b;
-    border-radius: 10px;
-    padding: 18px 22px;
-    text-align: center;
-}
-
-.raf-score {
-    font-size: 42px;
-    font-weight: 700;
-    color: #f59e0b;
-    line-height: 1;
-}
-
-.raf-label {
-    font-size: 12px;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 6px;
-}
-
-.raf-projected {
-    font-size: 28px;
-    font-weight: 700;
-    color: #10b981;
-    line-height: 1;
-}
-
-/* Problem list table */
-.condition-row {
-    background: #111827;
-    border: 1px solid #1e293b;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 8px;
+    margin-bottom: 16px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
 }
 
-.icd-code {
-    background: #1e293b;
-    color: #93c5fd;
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    font-weight: 600;
-    min-width: fit-content;
-}
-
-.hcc-badge {
-    background: #312e81;
-    color: #a5b4fc;
-    border-radius: 6px;
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.raf-badge {
-    background: #1a2e1a;
-    color: #86efac;
-    border-radius: 6px;
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-/* Clinical notes */
-.note-card {
-    background: #111827;
-    border: 1px solid #1e293b;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 12px;
-    position: relative;
-}
-
-.note-header {
-    font-size: 12px;
-    color: #64748b;
-    margin-bottom: 12px;
+/* Problem List Table */
+.problem-row {
     display: flex;
-    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f5f9;
 }
-
-.note-content {
-    font-size: 13px;
-    color: #cbd5e1;
-    line-height: 1.7;
-    white-space: pre-wrap;
-    font-family: 'Inter', sans-serif;
-}
-
-.note-badge {
-    background: #1e293b;
-    color: #94a3b8;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 11px;
-}
-
-/* HCC Gap alert */
-.gap-card {
-    background: linear-gradient(135deg, #1a0f2e 0%, #0f172a 100%);
-    border: 1px solid #7c3aed;
-    border-left: 4px solid #8b5cf6;
-    border-radius: 10px;
-    padding: 20px 24px;
-    margin-bottom: 12px;
-}
-
-.gap-icd {
-    font-size: 20px;
-    font-weight: 700;
-    color: #c4b5fd;
+.problem-row:last-child { border-bottom: none; }
+.icd-pill {
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 4px 10px;
+    border-radius: 6px;
     font-family: 'Courier New', monospace;
-}
-
-.gap-description {
+    font-weight: 700;
     font-size: 14px;
-    color: #e2e8f0;
-    margin-top: 4px;
 }
-
-.evidence-quote {
-    background: #1e1b4b;
-    border-left: 3px solid #6366f1;
+.hcc-pill {
+    background: #fef3c7;
+    color: #b45309;
+    padding: 2px 8px;
     border-radius: 4px;
-    padding: 10px 14px;
-    font-size: 13px;
-    color: #a5b4fc;
-    font-style: italic;
-    margin: 12px 0;
+    font-size: 12px;
+    font-weight: 600;
 }
 
-.confidence-high { color: #10b981; font-weight: 600; }
-.confidence-medium { color: #f59e0b; font-weight: 600; }
-.confidence-low { color: #ef4444; font-weight: 600; }
-
-/* Summary box */
-.summary-box {
-    background: #0f2027;
-    border: 1px solid #1e4d2e;
-    border-radius: 8px;
-    padding: 14px 18px;
-    font-size: 14px;
-    color: #86efac;
-    line-height: 1.6;
-}
-
-/* Revenue impact */
-.revenue-card {
-    background: linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%);
-    border: 1px solid #166534;
-    border-radius: 10px;
-    padding: 18px 22px;
+/* RAF Score Callout */
+.raf-giant {
+    font-size: 56px;
+    font-weight: 800;
+    color: #0f172a;
     text-align: center;
 }
 
-.revenue-amount {
-    font-size: 36px;
-    font-weight: 700;
-    color: #4ade80;
+/* Clinical Notes & AI Highlights */
+.note-box {
+    background: #f8fafc;
+    border-left: 4px solid #cbd5e1;
+    padding: 16px;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #334155;
+    white-space: pre-wrap;
+}
+.ai-highlight {
+    background-color: #fef08a; /* Soft yellow */
+    color: #854d0e;
+    font-weight: 600;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border-bottom: 2px solid #f59e0b;
 }
 
-.divider {
-    border: none;
-    border-top: 1px solid #1e293b;
-    margin: 28px 0;
+/* The AI Query Box */
+.query-box {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-left: 5px solid #10b981;
+    padding: 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #065f46;
 }
 </style>
 """, unsafe_allow_html=True)
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# Data loading helpers
+# Data Loading & Helpers (Keep exactly the same as before)
 # ─────────────────────────────────────────────────────────────────────────────
-
-@st.cache_resource
-def get_db_session():
-    from src.database import get_session
-    return get_session()
-
-
 @st.cache_data(ttl=30)
 def load_patient_data():
-    """Load Tamara's data from SQLite."""
     try:
         from src.database import get_session
         from src.models import Patient, Condition, ClinicalNote
         session = get_session()
         patient = session.query(Patient).filter(Patient.name.contains("Tamara")).first()
-        if not patient:
-            return None, [], []
+        if not patient: return None, [], []
         conditions = session.query(Condition).filter_by(patient_id=patient.id).all()
         notes = session.query(ClinicalNote).filter_by(patient_id=patient.id).all()
         return patient, conditions, notes
     except Exception as e:
-        st.error(f"Database error: {e}")
         return None, [], []
 
-
-def highlight_evidence(text: str, keywords: list[str]) -> str:
-    """Wrap evidence keywords in a highlight span."""
+def apply_ai_highlight(text: str, keywords: list[str]) -> str:
     import re
     for kw in keywords:
         pattern = re.compile(re.escape(kw), re.IGNORECASE)
-        text = pattern.sub(f'<mark style="background:#3b1d61;color:#c4b5fd;border-radius:3px;padding:1px 3px;">{kw}</mark>', text)
+        text = pattern.sub(f'<span class="ai-highlight">{kw}</span>', text)
     return text
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Load data
-# ─────────────────────────────────────────────────────────────────────────────
 
 patient, conditions, notes = load_patient_data()
 
 if not patient:
-    st.error("⚠️  No patient data found. Run `python scripts/seed_db.py` first.")
+    st.error("⚠️ No patient data found. Run `python scripts/seed_db.py` first.")
     st.stop()
 
-from src.hcc_engine import compute_raf, HCC_MAP
+from src.hcc_engine import compute_raf
 current_raf = compute_raf([c.icd10_code for c in conditions])
-from datetime import date
-dob = date.fromisoformat(patient.dob)
-age = (date.today() - dob).days // 365
-
+age = (date.today() - date.fromisoformat(patient.dob)).days // 365
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Header
+# 1. The CFO Header (Enterprise Macro Impact)
 # ─────────────────────────────────────────────────────────────────────────────
+st.markdown("### 🏢 Clinic-Wide Value-Based Care Performance (Trailing 30 Days)")
+c1, c2, c3, c4 = st.columns(4)
+with c1:
+    st.markdown('<div class="glass-card"><div class="metric-label">Charts Audited</div><div class="metric-value text-blue">1,402</div></div>', unsafe_allow_html=True)
+with c2:
+    st.markdown('<div class="glass-card"><div class="metric-label">HCC Gaps Found</div><div class="metric-value text-purple">184</div></div>', unsafe_allow_html=True)
+with c3:
+    st.markdown('<div class="glass-card"><div class="metric-label">Projected RAF Lift</div><div class="metric-value text-green">+ 42.50</div></div>', unsafe_allow_html=True)
+with c4:
+    st.markdown('<div class="glass-card"><div class="metric-label">Potential Revenue Recovery</div><div class="metric-value text-green">$510,000</div></div>', unsafe_allow_html=True)
 
-st.markdown("## 🏥 HCC Risk Navigator")
-st.markdown('<p style="color:#64748b;font-size:14px;margin-top:-10px;">Clinical Documentation Improvement · Medicare Advantage Risk Adjustment Audit</p>', unsafe_allow_html=True)
+st.markdown("<hr style='border-top: 1px dashed #cbd5e1; margin: 10px 0 30px 0;'>", unsafe_allow_html=True)
 
-st.markdown('<div class="section-header" style="margin-top: 24px;">🏢 Clinic-Wide Impact (YTD)</div>', unsafe_allow_html=True)
-col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-col_m1.metric("Total Patients Audited", "1,402")
-col_m2.metric("HCC Gaps Identified", "184")
-col_m3.metric("Projected RAF Increase", "+42.5", delta="Trending Up")
-col_m4.metric("Potential Revenue", "$510,000", delta="+12%")
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Patient Banner
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. Patient Banner
+# ─────────────────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="patient-banner">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
             <div class="patient-name">{patient.name}</div>
-            <div class="patient-meta" style="margin-top:6px;">
-                DOB: {patient.dob} &nbsp;·&nbsp; Age: {age} &nbsp;·&nbsp; {patient.gender.title()} &nbsp;·&nbsp; ID: {patient.fhir_id}
-            </div>
+            <div class="patient-meta">DOB: {patient.dob} (Age {age}) • {patient.gender.title()} • MRN: {patient.fhir_id.split('-')[-1]}</div>
         </div>
-        <div style="text-align:right;">
-            <span class="ins-badge">🛡 {patient.insurance_plan}</span>
-        </div>
+        <div><span class="ins-badge">🛡️ {patient.insurance_plan}</span></div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# Main layout: Problem List | RAF Score | Run Audit
+# 3. Split View: Problem List & RAF Auditor
 # ─────────────────────────────────────────────────────────────────────────────
+col_left, col_right = st.columns([2, 1])
 
-col_problems, col_raf, col_audit = st.columns([3, 1.5, 1.5])
-
-with col_problems:
-    st.markdown('<div class="section-header">📋 Active Problem List (Coded ICD-10)</div>', unsafe_allow_html=True)
+with col_left:
+    st.markdown('<div class="section-title">📋 Coded Problem List (Active)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     for cond in conditions:
-        hcc_info = HCC_MAP.get(cond.icd10_code, {})
-        hcc_text = f"HCC {cond.hcc_code}" if cond.hcc_code else "Non-HCC"
-        raf_text = f"RAF +{cond.raf_weight:.3f}" if cond.raf_weight else "RAF 0.000"
+        hcc_badge = f'<span class="hcc-pill">HCC {cond.hcc_code} (+{cond.raf_weight:.3f})</span>' if cond.hcc_code else ''
         st.markdown(f"""
-        <div class="condition-row">
-            <span class="icd-code">{cond.icd10_code}</span>
-            <span style="flex:1;font-size:14px;color:#e2e8f0;">{cond.description}</span>
-            <span class="hcc-badge">{hcc_text}</span>
-            <span class="raf-badge">{raf_text}</span>
+        <div class="problem-row">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span class="icd-pill">{cond.icd10_code}</span>
+                <span style="font-weight:500;">{cond.description}</span>
+            </div>
+            {hcc_badge}
         </div>
         """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-with col_raf:
-    st.markdown('<div class="section-header">📊 RAF Score</div>', unsafe_allow_html=True)
+with col_right:
+    st.markdown('<div class="section-title">📊 RAF Audit</div>', unsafe_allow_html=True)
     st.markdown(f"""
-    <div class="raf-card">
-        <div class="raf-score">{current_raf:.3f}</div>
-        <div class="raf-label">Current RAF</div>
-        <hr style="border-color:#1e293b;margin:12px 0;">
-        <div style="font-size:11px;color:#64748b;">HCC Codes Captured</div>
-        <div style="font-size:22px;font-weight:700;color:#60a5fa;margin-top:4px;">
-            {sum(1 for c in conditions if c.hcc_code and c.hcc_code > 0)}
-        </div>
-        <div style="font-size:11px;color:#64748b;margin-top:8px;">Annual Revenue</div>
-        <div style="font-size:18px;font-weight:600;color:#f59e0b;margin-top:2px;">
-            ~${current_raf * 12000:,.0f}
-        </div>
+    <div class="glass-card" style="text-align:center;">
+        <div class="metric-label">Current RAF Score</div>
+        <div class="raf-giant">{current_raf:.3f}</div>
+        <div style="font-size:14px; color:#64748b; margin-top:8px;">Base Revenue: ~${current_raf * 12000:,.0f} / yr</div>
     </div>
     """, unsafe_allow_html=True)
-
-with col_audit:
-    st.markdown('<div class="section-header">🔍 HCC Audit</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:13px;color:#94a3b8;margin-bottom:16px;">Run the AI engine to scan for uncoded HCC conditions in the clinical notes.</div>', unsafe_allow_html=True)
 
     audit_result = None
-    if st.button("⚡ Run HCC Audit", type="primary", use_container_width=True):
-        with st.spinner("Analyzing clinical documentation..."):
-            try:
-                from unittest.mock import patch
-                from src.hcc_engine import audit_hcc_gaps
+    if st.button("⚡ Execute AI Chart Audit", type="primary", use_container_width=True):
+        with st.spinner("Hunting for uncoded clinical evidence..."):
+            from src.hcc_engine import audit_hcc_gaps
+            # Build context dictionary as before
+            fhir_context = {
+                "patient": {"fhir_id": patient.fhir_id, "name": patient.name, "dob": patient.dob, "gender": patient.gender, "insurance_plan": patient.insurance_plan},
+                "conditions": [{"icd10_code": c.icd10_code, "description": c.description, "hcc_code": c.hcc_code, "raf_weight": c.raf_weight, "clinical_status": c.clinical_status} for c in conditions],
+                "clinical_notes": [{"note_type": n.note_type, "authored_date": n.authored_date, "author": n.author, "content": n.content} for n in notes],
+            }
+            audit_result = audit_hcc_gaps(fhir_context)
+            st.session_state["audit_result"] = audit_result
 
-                # Build context in-app for demo reliability
-                fhir_context = {
-                    "patient": {
-                        "fhir_id": patient.fhir_id,
-                        "name": patient.name,
-                        "dob": patient.dob,
-                        "gender": patient.gender,
-                        "insurance_plan": patient.insurance_plan,
-                    },
-                    "conditions": [
-                        {"icd10_code": c.icd10_code, "description": c.description,
-                         "hcc_code": c.hcc_code, "raf_weight": c.raf_weight,
-                         "clinical_status": c.clinical_status}
-                        for c in conditions
-                    ],
-                    "clinical_notes": [
-                        {"note_type": n.note_type, "authored_date": n.authored_date,
-                         "author": n.author, "content": n.content}
-                        for n in notes
-                    ],
-                }
-                audit_result = audit_hcc_gaps(fhir_context)
-                st.session_state["audit_result"] = audit_result
-                st.success(f"✅ Audit complete — {audit_result['gap_count']} gap(s) found")
-            except Exception as e:
-                st.error(f"Audit error: {e}")
-
-    if "audit_result" in st.session_state and st.session_state["audit_result"]:
-        audit_result = st.session_state["audit_result"]
-
+if "audit_result" in st.session_state:
+    audit_result = st.session_state["audit_result"]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Clinical Notes
+# 4. The AI Insight Layer (Shows only after audit)
 # ─────────────────────────────────────────────────────────────────────────────
-
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
-st.markdown('<div class="section-header">📝 Clinical Documentation (FHIR DocumentReference)</div>', unsafe_allow_html=True)
-
-evidence_keywords = ["burning sensation", "numbness", "gabapentin", "neuropathy", "bilateral lower extremity", "peripheral neuropathy"]
-
-for note in notes:
-    highlighted = highlight_evidence(note.content, evidence_keywords)
-    st.markdown(f"""
-    <div class="note-card">
-        <div class="note-header">
-            <span class="note-badge">📄 {note.note_type}</span>
-            <span class="note-badge">📅 {note.authored_date}</span>
-            <span class="note-badge">👩‍⚕️ {note.author or 'Unknown'}</span>
-        </div>
-        <div class="note-content">{highlighted}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if audit_result and audit_result.get("gaps"):
-        st.markdown("""
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;margin-bottom:4px;">
-            <span style="font-size:13px;color:#8b5cf6;font-weight:600;">⬆ HCC Gap Evidence</span>
-            <span style="font-size:11px;color:#64748b;">Highlighted text supports the uncoded condition</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# HCC Gap Report (shown after audit)
-# ─────────────────────────────────────────────────────────────────────────────
-
-if audit_result:
-    st.markdown('<hr class="divider">', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">🚨 HCC Coding Gap Analysis — AI Audit Report</div>', unsafe_allow_html=True)
-
-    if audit_result.get("audit_summary"):
+if audit_result and audit_result.get("gaps"):
+    st.markdown("<hr style='border-top: 1px dashed #cbd5e1; margin: 30px 0;'>", unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🚨 AI Audit Findings & Revenue Gap</div>', unsafe_allow_html=True)
+    
+    gap = audit_result["gaps"][0] # Grab the first found gap
+    
+    col_note, col_action = st.columns([1.5, 1.5])
+    
+    with col_note:
+        st.markdown(f"**Unstructured Clinical Note ({notes[0].authored_date})**")
+        # Highlight the exact phrase the AI found
+        highlighted_text = apply_ai_highlight(notes[0].content, [gap.get("evidence_quote", "burning sensation")])
+        st.markdown(f'<div class="note-box">{highlighted_text}</div>', unsafe_allow_html=True)
+        
+    with col_action:
+        rev_impact = gap.get("raf_delta", 0) * 12000
         st.markdown(f"""
-        <div class="summary-box">
-            🤖 <strong>AI Summary:</strong> {audit_result["audit_summary"]}
+        <div class="glass-card" style="border-left: 4px solid #f59e0b;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                <span style="font-weight:700; color:#b45309;">Missed HCC Opportunity</span>
+                <span style="font-weight:700; color:#059669;">+ ${rev_impact:,.0f} / yr</span>
+            </div>
+            <div style="font-size:20px; font-weight:700; margin-bottom:4px;">{gap["suspected_icd10"]}</div>
+            <div style="font-size:15px; color:#475569; margin-bottom:16px;">{gap["description"]} (HCC {gap["suspected_hcc"]})</div>
+            <div style="font-size:13px; color:#64748b;"><strong>AI Rationale:</strong> {gap["clinical_rationale"]}</div>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-
-    for gap in audit_result.get("gaps", []):
-        conf = gap.get("confidence", "MEDIUM")
-        conf_class = f"confidence-{conf.lower()}"
-        hcc = HCC_MAP.get(gap["suspected_icd10"], {})
-        raf_delta = gap.get("raf_delta", hcc.get("raf", 0))
-        revenue_delta = raf_delta * 12000
-
+        
+        # The new "Last Mile" Clinician Query feature
+        query_text = audit_result.get("draft_clinician_query", f"Dr. {notes[0].author}, your note indicates symptoms of diabetic neuropathy, but E11.40 is not on the active problem list. Do you agree to amend the chart?")
         st.markdown(f"""
-        <div class="gap-card">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;">
-                <div>
-                    <span class="gap-icd">{gap["suspected_icd10"]}</span>
-                    <div class="gap-description">{gap.get("description", "")}</div>
-                </div>
-                <div style="text-align:right;">
-                    <span class="hcc-badge">HCC {gap.get("suspected_hcc", "?")}</span>
-                    <span class="raf-badge" style="margin-left:4px;">+{raf_delta:.3f} RAF</span>
-                    <div class="{conf_class}" style="font-size:12px;margin-top:4px;">⭐ {conf} confidence</div>
-                </div>
+        <div class="query-box">
+            <div style="font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <span>✉️</span> Auto-Generated Clinician Query
             </div>
-            <div class="evidence-quote">
-                💬 "{gap.get("evidence_quote", "")}"
-            </div>
-            <div style="font-size:13px;color:#94a3b8;margin-top:8px;">
-                <strong style="color:#c4b5fd;">Clinical Rationale:</strong> {gap.get("clinical_rationale", "")}
+            <em>"{query_text}"</em>
+            <div style="margin-top: 16px;">
+                <button style="background:#10b981; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:600; width:100%;">Send for Physician Sign-off</button>
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-        if gap.get("draft_clinician_query"):
-            st.info(f"**Draft Clinician Query:**\n\n{gap['draft_clinician_query']}", icon="✍️")
-
-        col_rev1, col_rev2, col_rev3 = st.columns(3)
-        with col_rev1:
-            st.metric("Current RAF", f"{audit_result['current_raf']:.3f}")
-        with col_rev2:
-            st.metric("Projected RAF", f"{audit_result['projected_raf']:.3f}",
-                      delta=f"+{audit_result['raf_delta']:.3f}")
-        with col_rev3:
-            st.metric("Est. Revenue Impact", f"${revenue_delta:,.0f}/yr",
-                      delta="per patient", delta_color="normal")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Footer
-# ─────────────────────────────────────────────────────────────────────────────
-
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
-st.markdown("""
-<div style="text-align:center;font-size:12px;color:#374151;">
-    HCC Risk Navigator · Mock EHR Dashboard · Data is entirely synthetic (HIPAA-safe) · 
-    CMS HCC Model V28 · MCP Server running at <code>localhost:8000/mcp/sse</code>
-</div>
-""", unsafe_allow_html=True)
+elif audit_result:
+    st.success("Audit complete. No coding gaps identified.")
+else:
+    # Show clean notes before audit
+    st.markdown("<hr style='border-top: 1px dashed #cbd5e1; margin: 30px 0;'>", unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📄 Clinical Documentation</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="note-box">{notes[0].content}</div>', unsafe_allow_html=True)
