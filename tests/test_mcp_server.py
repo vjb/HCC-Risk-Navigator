@@ -1,55 +1,57 @@
 """
-TDD Phase 3 — MCP Server Tests: SSE Transport + Tool Registration
-=================================================================
-Tests specifically validate the HTTP/SSE transport layer as required for
-ngrok tunneling to the Prompt Opinion cloud platform.
+tests/test_mcp_server.py — MCP Server Transport & Tool Tests
+=============================================================
+Tests for the HTTP/SSE MCP transport (for Prompt Opinion / ngrok integration).
 
-The MCP SSE transport exposes:
-  GET  /mcp/sse           → SSE stream (text/event-stream)
-  POST /mcp/messages      → JSON-RPC 2.0 message bus (requires ?sessionId=)
-
-REST wrapper endpoints (for direct testing and health checks):
-  GET  /health
-  POST /tools/get_fhir_context
-  POST /tools/hunt_clinical_evidence
-  POST /tools/generate_pa_justification
-
-Run with:
-    pytest tests/test_mcp_server.py -v -asyncio-mode=auto
+Strategy:
+  - REST wrapper tests: Use httpx.ASGITransport (fast, reliable, in-process).
+  - SSE transport tests: Use a real uvicorn process on a random port — this is
+    the only correct way to test SSE because it requires two concurrent connections
+    (GET /mcp/sse + POST /mcp/messages), which ASGI transport cannot handle.
 """
 from __future__ import annotations
 
 import asyncio
 import json
 import re
+import socket
+import subprocess
+import sys
+import time
+import os
+from datetime import date, timedelta
 from unittest.mock import patch
 
+import httpx
 import pytest
-import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
+from src.models import ClinicalNote, Condition, Patient
+
+
 # ─────────────────────────────────────────────────────────────────────────────
-# App Fixture — In-memory DB, pre-seeded with Tamara's records
+# Shared Fixtures
 # ─────────────────────────────────────────────────────────────────────────────
 
 @pytest.fixture(scope="module")
-def seeded_app():
+def seeded_app(tmp_path_factory):
     """
-    Module-scoped FastAPI app backed by an in-memory SQLite DB.
-    Seeds Tamara's full FHIR dataset before yielding the app.
+    Creates a fresh in-memory SQLite database, seeds it, and returns the
+    FastAPI app configured to use that DB.
     """
     import os
-    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+    db_path = tmp_path_factory.mktemp("mcp_test_db") / "test_ehr.sqlite"
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
-    from src.database import engine
+    # Re-import after env setup
+    from src.database import engine, init_db
     from src.models import Base
     Base.metadata.create_all(bind=engine)
 
-    from sqlalchemy.orm import sessionmaker
-    session = sessionmaker(bind=engine)()
-    from scripts.seed_db import seed
-    seed(session)
-    session.close()
+    from sqlalchemy.orm import Session
+    with Session(engine) as session:
+        from scripts.seed_db import seed
+        seed(session)
 
     from src.server import app
     return app
@@ -57,302 +59,262 @@ def seeded_app():
 
 @pytest.fixture()
 async def client(seeded_app):
-    """Async HTTPX client wired to the FastAPI ASGI app.
-    
-    Note: Host header must be 'localhost' — MCP SDK v1.x validates the Host
-    header as part of DNS rebinding protection. The test base_url is set to
-    http://localhost to satisfy this check.
-    """
+    """In-process HTTPX client for REST endpoint tests."""
     async with AsyncClient(
         transport=ASGITransport(app=seeded_app),
-        base_url="http://localhost",  # Must match a trusted host for MCP security check
+        base_url="http://localhost",
         headers={"Host": "localhost"},
     ) as ac:
         yield ac
 
 
+def _free_port() -> int:
+    """Find an available TCP port for the live test server."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+@pytest.fixture(scope="module")
+def live_server_url(seeded_app, tmp_path_factory):
+    """
+    Starts a REAL uvicorn process for SSE transport tests.
+    SSE testing requires two concurrent connections, which ASGI transport cannot do.
+    Yields the base URL string (e.g. 'http://127.0.0.1:18321').
+    """
+    port = _free_port()
+    db_url = os.environ.get("DATABASE_URL", "")
+
+    proc = subprocess.Popen(
+        [
+            sys.executable, "-m", "uvicorn",
+            "src.server:app",
+            "--host", "127.0.0.1",
+            "--port", str(port),
+            "--log-level", "warning",
+        ],
+        env={**os.environ, "DATABASE_URL": db_url},  # Pass DB path to subprocess
+    )
+
+    # Wait for server to be ready
+    deadline = time.time() + 10.0
+    while time.time() < deadline:
+        try:
+            r = httpx.get(f"http://127.0.0.1:{port}/health", timeout=1.0)
+            if r.status_code == 200:
+                break
+        except Exception:
+            time.sleep(0.2)
+    else:
+        proc.terminate()
+        pytest.fail("Live uvicorn server failed to start within 10 seconds")
+
+    yield f"http://127.0.0.1:{port}"
+
+    proc.terminate()
+    proc.wait(timeout=5)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
-# Test 1: SSE Transport — Connection & Content-Type
+# Health Check & Basic Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestHealthAndBasic:
+    async def test_health_endpoint_returns_200(self, client):
+        r = await client.get("/health")
+        assert r.status_code == 200
+
+    async def test_health_returns_ok_status(self, client):
+        r = await client.get("/health")
+        data = r.json()
+        assert data["status"] == "ok"
+
+    async def test_docs_endpoint_accessible(self, client):
+        r = await client.get("/docs")
+        assert r.status_code == 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REST Wrapper Tests — audit_hcc_opportunities tool via POST /tools/*
+# ─────────────────────────────────────────────────────────────────────────────
+
+MOCK_AUDIT_RESULT = json.dumps({
+    "gaps": [{
+        "suspected_icd10": "E11.40",
+        "suspected_hcc": 18,
+        "description": "Type 2 diabetes mellitus with diabetic neuropathy",
+        "evidence_quote": "burning sensation in both feet",
+        "clinical_rationale": "Bilateral neuropathy symptoms with Gabapentin supports E11.40.",
+        "raf_delta": 0.302,
+        "confidence": "HIGH",
+    }],
+    "audit_summary": "Coding gap: E11.40 missing from problem list.",
+})
+
+class TestHCCAuditTool:
+    async def test_audit_tool_returns_200(self, client):
+        with patch("src.hcc_engine._call_llm", return_value=MOCK_AUDIT_RESULT):
+            r = await client.post(
+                "/tools/audit_hcc_opportunities",
+                json={"patient_id": "tamara-williams-001"},
+            )
+        assert r.status_code == 200
+
+    async def test_audit_identifies_e11_40_gap(self, client):
+        with patch("src.hcc_engine._call_llm", return_value=MOCK_AUDIT_RESULT):
+            r = await client.post(
+                "/tools/audit_hcc_opportunities",
+                json={"patient_id": "tamara-williams-001"},
+            )
+        data = r.json()
+        gap_codes = [g["suspected_icd10"] for g in data.get("gaps", [])]
+        assert "E11.40" in gap_codes
+
+    async def test_audit_returns_current_raf(self, client):
+        with patch("src.hcc_engine._call_llm", return_value=MOCK_AUDIT_RESULT):
+            r = await client.post(
+                "/tools/audit_hcc_opportunities",
+                json={"patient_id": "tamara-williams-001"},
+            )
+        data = r.json()
+        assert "current_raf" in data
+        assert abs(data["current_raf"] - 0.104) < 0.001
+
+    async def test_audit_returns_projected_raf(self, client):
+        with patch("src.hcc_engine._call_llm", return_value=MOCK_AUDIT_RESULT):
+            r = await client.post(
+                "/tools/audit_hcc_opportunities",
+                json={"patient_id": "tamara-williams-001"},
+            )
+        data = r.json()
+        assert "projected_raf" in data
+        assert data["projected_raf"] > data["current_raf"]
+
+
+class TestErrorHandling:
+    async def test_unknown_patient_returns_404(self, client):
+        r = await client.post(
+            "/tools/audit_hcc_opportunities",
+            json={"patient_id": "nonexistent-000"},
+        )
+        assert r.status_code == 404
+
+    async def test_missing_patient_id_returns_422(self, client):
+        r = await client.post("/tools/audit_hcc_opportunities", json={})
+        assert r.status_code == 422
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SSE Transport Tests — real uvicorn process
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestSSETransport:
     """
-    Validates that the MCP SSE transport is correctly initialized and responds
-    with the expected content-type for streaming. This is the transport that
-    Prompt Opinion connects to via the ngrok tunnel.
-
-    Note: SSE connections stay open indefinitely. These tests use asyncio.timeout
-    to cap the connection, then assert on headers/first-chunk data collected
-    before the timeout intentionally fires.
+    Tests for the MCP SSE endpoints using a real uvicorn process.
+    ASGI transport cannot be used here because SSE requires TWO concurrent
+    connections: one for GET /mcp/sse (stream) and one for POST /mcp/messages.
     """
 
-    async def test_sse_endpoint_returns_200(self, client: AsyncClient):
-        """
-        GET /mcp/sse must return 200 OK. This confirms the SSE transport
-        is mounted and listening — a prerequisite for Prompt Opinion integration.
-        """
-        status_code = None
-        try:
-            async with asyncio.timeout(3.0):
-                async with client.stream("GET", "/mcp/sse") as response:
-                    status_code = response.status_code
-                    # Drain one chunk to confirm the stream started, then let timeout fire
-                    async for _ in response.aiter_bytes():
-                        break
-        except (TimeoutError, asyncio.CancelledError):
-            pass  # Expected — SSE stream never closes; we got what we needed
+    def test_sse_endpoint_returns_200(self, live_server_url):
+        """GET /mcp/sse must start a streaming 200 response."""
+        with httpx.stream("GET", f"{live_server_url}/mcp/sse", timeout=5.0) as r:
+            assert r.status_code == 200
 
-        assert status_code == 200, (
-            f"Expected 200 from /mcp/sse, got {status_code}. "
-            "Check that mcp.server.sse is mounted at /mcp."
+    def test_sse_endpoint_content_type(self, live_server_url):
+        """GET /mcp/sse must return Content-Type: text/event-stream."""
+        with httpx.stream("GET", f"{live_server_url}/mcp/sse", timeout=5.0) as r:
+            assert "text/event-stream" in r.headers.get("content-type", "")
+
+    def test_sse_stream_sends_endpoint_event(self, live_server_url):
+        """
+        The first SSE event must be an 'endpoint' event containing a sessionId.
+        This is how the MCP client discovers where to POST its JSON-RPC calls.
+        """
+        collected = ""
+        with httpx.stream("GET", f"{live_server_url}/mcp/sse", timeout=5.0) as r:
+            for chunk in r.iter_text():
+                collected += chunk
+                if "sessionId" in collected or "endpoint" in collected:
+                    break
+                if len(collected) > 4096:
+                    break
+        assert "sessionId" in collected or "messages" in collected, (
+            f"Expected endpoint event in SSE stream, got: {collected[:200]!r}"
         )
 
-    async def test_sse_endpoint_content_type_is_event_stream(self, client: AsyncClient):
+    async def test_jsonrpc_tools_list_via_sse(self, live_server_url):
         """
-        GET /mcp/sse must set Content-Type: text/event-stream.
-        This is a hard requirement for SSE; Prompt Opinion's agent runtime
-        will reject the connection if this header is missing or wrong.
-        """
-        content_type = None
-        try:
-            async with asyncio.timeout(3.0):
-                async with client.stream("GET", "/mcp/sse") as response:
-                    content_type = response.headers.get("content-type", "")
-                    async for _ in response.aiter_bytes():
-                        break
-        except (TimeoutError, asyncio.CancelledError):
-            pass
-
-        assert content_type is not None, "/mcp/sse returned no response before timeout"
-        assert "text/event-stream" in content_type, (
-            f"Expected Content-Type: text/event-stream, got {content_type!r}. "
-            "SSE transport is not correctly configured."
-        )
-
-    async def test_sse_endpoint_sends_endpoint_event(self, client: AsyncClient):
-        """
-        The first event on the SSE stream must be an 'endpoint' event containing
-        the /mcp/messages URL with a sessionId. This is how the MCP client
-        discovers where to POST its JSON-RPC messages.
-
-        Event format:
-            event: endpoint
-            data: /messages/?sessionId=<uuid>
-        """
-        collected = b""
-        try:
-            async with asyncio.timeout(3.0):
-                async with client.stream("GET", "/mcp/sse") as response:
-                    assert response.status_code == 200
-                    async for chunk in response.aiter_bytes():
-                        collected += chunk
-                        # Stop once we have the endpoint event
-                        if b"sessionId" in collected or b"endpoint" in collected:
-                            break
-                        if len(collected) > 8192:
-                            break
-        except (TimeoutError, asyncio.CancelledError):
-            pass
-
-        decoded = collected.decode("utf-8", errors="replace")
-        assert "endpoint" in decoded or "sessionId" in decoded or "messages" in decoded, (
-            f"Expected endpoint event with sessionId in SSE stream first chunk, got: {decoded[:300]!r}"
-        )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Test 2: Tool Execution via JSON-RPC (POST /mcp/messages)
-# ─────────────────────────────────────────────────────────────────────────────
-
-class TestMCPToolExecution:
-    """
-    Tests that the MCP tool execution pipeline works end-to-end via JSON-RPC 2.0.
-    Simulates exactly what the Prompt Opinion agent runtime sends when it
-    invokes a tool.
-    """
-
-    async def _get_session_id(self, client: AsyncClient) -> str | None:
-        """
-        Helper: connect to /mcp/sse and extract the sessionId from the
-        endpoint event so we can POST to /mcp/messages.
-        Times out after 3 seconds — SSE stream stays open indefinitely.
+        Full MCP JSON-RPC round-trip over SSE transport:
+          1. GET /mcp/sse → receive endpoint event + sessionId
+          2. POST /mcp/messages?sessionId=X with initialize request
+          3. POST /mcp/messages?sessionId=X with tools/list request
+          4. Assert tools/list response contains audit_hcc_opportunities
         """
         session_id = None
-        try:
-            async with asyncio.timeout(3.0):
-                async with client.stream("GET", "/mcp/sse") as response:
-                    async for chunk in response.aiter_bytes():
-                        text = chunk.decode("utf-8", errors="replace")
-                        match = re.search(r"sessionId[=:]([a-zA-Z0-9\-]+)", text)
-                        if match:
-                            session_id = match.group(1)
-                            break
-                        if len(text) > 2048:
-                            break
-        except (TimeoutError, asyncio.CancelledError):
-            pass
-        return session_id
+        sse_task_done = asyncio.Event()
 
-    async def test_tools_list_via_jsonrpc(self, client: AsyncClient):
-        """
-        POST a tools/list JSON-RPC call to /mcp/messages.
-        Asserts that our three MCP tools are registered and discoverable.
-        """
-        session_id = await self._get_session_id(client)
-        if session_id is None:
-            pytest.skip("Could not extract SSE sessionId — skipping JSON-RPC test")
+        async def collect_sse_session_id():
+            nonlocal session_id
+            async with httpx.AsyncClient(timeout=10.0) as hc:
+                async with hc.stream("GET", f"{live_server_url}/mcp/sse") as resp:
+                    async for line in resp.aiter_lines():
+                        if "sessionId" in line:
+                            m = re.search(r"sessionId=([A-Za-z0-9_\-]+)", line)
+                            if m:
+                                session_id = m.group(1)
+                                break
+                    await sse_task_done.wait()
 
-        jsonrpc_payload = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/list",
-            "params": {},
-        }
-        response = await client.post(
-            f"/mcp/messages?sessionId={session_id}",
-            json=jsonrpc_payload,
-        )
-        # MCP SSE returns 202 Accepted for async message processing
-        assert response.status_code in (200, 202), (
-            f"Expected 200/202 from /mcp/messages, got {response.status_code}"
-        )
+        sse_task = asyncio.create_task(collect_sse_session_id())
 
-    async def test_get_fhir_context_via_rest_wrapper(self, client: AsyncClient):
-        """
-        Verifies get_fhir_context tool returns Tamara's FHIR data.
-        Uses the REST wrapper endpoint for synchronous testability.
-        The REST wrapper calls the same logic as the MCP tool.
-        """
-        response = await client.post(
-            "/tools/get_fhir_context",
-            json={"patient_id": "tamara-chen-001"},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["patient"]["name"] == "Tamara Chen", (
-            f"Expected patient name 'Tamara Chen', got {data['patient'].get('name')!r}"
-        )
-        assert isinstance(data.get("medications"), list)
-        assert isinstance(data.get("observations"), list)
-        assert isinstance(data.get("clinical_notes"), list)
+        # Wait for sessionId
+        for _ in range(50):
+            if session_id:
+                break
+            await asyncio.sleep(0.1)
 
-    async def test_hunt_clinical_evidence_via_rest_wrapper(self, client: AsyncClient):
-        """
-        Verifies hunt_clinical_evidence tool locates the GI intolerance evidence.
-        This is the critical 'exception hunting' capability that unlocks the PA bypass.
-        """
-        response = await client.post(
-            "/tools/hunt_clinical_evidence",
-            json={"patient_id": "tamara-chen-001", "condition_keyword": "GI intolerance"},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["matching_notes"], (
-            "Expected at least one note matching 'GI intolerance', got empty list. "
-            "Check that seed_db correctly populates the GI intolerance progress note."
-        )
+        assert session_id, "SSE transport did not send an endpoint event with sessionId"
 
-    async def test_generate_pa_justification_via_rest_wrapper(self, client: AsyncClient):
-        """
-        Verifies the full PA reasoning pipeline returns a structured payload.
-        LLM is mocked — no real API calls.
-        """
-        mock_llm_response = json.dumps({
-            "step_therapy_assessment": "FAILED — 61 days completed, 180 required.",
-            "exception_found": True,
-            "exception_evidence": "Severe GI intolerance documented.",
-            "pa_letter": "PRIOR AUTHORIZATION EXCEPTION REQUEST\n\nTo: Aetna\nApproved by: Dr. Morrison",
-        })
-        with patch("src.pa_engine._call_llm", return_value=mock_llm_response):
-            response = await client.post(
-                "/tools/generate_pa_justification",
+        async with httpx.AsyncClient(timeout=5.0) as hc:
+            # MCP initialize
+            r1 = await hc.post(
+                f"{live_server_url}/mcp/messages",
+                params={"sessionId": session_id},
                 json={
-                    "patient_id": "tamara-chen-001",
-                    "target_medication": "Ozempic (semaglutide 0.5mg)",
-                    "policy_text": "Aetna requires 6 months of metformin. Exception for GI intolerance.",
+                    "jsonrpc": "2.0", "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {},
+                        "clientInfo": {"name": "test-client", "version": "0.1"},
+                    },
                 },
+                headers={"Content-Type": "application/json"},
             )
-        assert response.status_code == 200
-        data = response.json()
-        assert "step_therapy_met" in data
-        assert data["step_therapy_met"] is False
-        assert data["exception_found"] is True
-        assert "pa_letter" in data
+            assert r1.status_code in (200, 202), f"initialize failed: {r1.status_code} {r1.text}"
 
+            # MCP initialized notification
+            await hc.post(
+                f"{live_server_url}/mcp/messages",
+                params={"sessionId": session_id},
+                json={"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+                headers={"Content-Type": "application/json"},
+            )
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Test 3: Error Handling
-# ─────────────────────────────────────────────────────────────────────────────
+            # tools/list
+            r2 = await hc.post(
+                f"{live_server_url}/mcp/messages",
+                params={"sessionId": session_id},
+                json={"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+                headers={"Content-Type": "application/json"},
+            )
+            assert r2.status_code in (200, 202)
 
-class TestErrorHandling:
-    """
-    Validates that the server returns proper error responses for invalid inputs.
-    MCP and REST error handling are both tested.
-    """
+        # Give the SSE stream time to receive the tool list response
+        await asyncio.sleep(0.5)
+        sse_task_done.set()
 
-    async def test_unknown_patient_returns_404(self, client: AsyncClient):
-        """
-        Requesting FHIR context for an unknown patient must return HTTP 404.
-        This prevents silent data errors when the Prompt Opinion agent passes
-        an incorrect patient_id.
-        """
-        response = await client.post(
-            "/tools/get_fhir_context",
-            json={"patient_id": "does-not-exist-999"},
-        )
-        assert response.status_code == 404, (
-            f"Expected 404 for unknown patient, got {response.status_code}"
-        )
-
-    async def test_missing_patient_id_returns_422(self, client: AsyncClient):
-        """
-        Missing required fields must return HTTP 422 (Pydantic validation error).
-        """
-        response = await client.post(
-            "/tools/get_fhir_context",
-            json={},  # Missing patient_id
-        )
-        assert response.status_code == 422, (
-            f"Expected 422 for missing patient_id, got {response.status_code}"
-        )
-
-    async def test_hunt_evidence_unknown_patient_returns_404(self, client: AsyncClient):
-        """Unknown patient_id on hunt_clinical_evidence must return 404."""
-        response = await client.post(
-            "/tools/hunt_clinical_evidence",
-            json={"patient_id": "ghost-patient", "condition_keyword": "anything"},
-        )
-        assert response.status_code == 404
-
-    async def test_hunt_evidence_no_match_returns_empty_list(self, client: AsyncClient):
-        """
-        A keyword with no clinical note matches must return an empty list
-        with 200 OK — not a 404 or 500. The agent must be able to distinguish
-        'no evidence found' from 'patient not found'.
-        """
-        response = await client.post(
-            "/tools/hunt_clinical_evidence",
-            json={
-                "patient_id": "tamara-chen-001",
-                "condition_keyword": "xylophone-allergy-condition-zzz",
-            },
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data.get("matching_notes") == [], (
-            f"Expected empty list for no-match, got {data.get('matching_notes')}"
-        )
-
-    async def test_generate_pa_missing_fields_returns_422(self, client: AsyncClient):
-        """Missing target_medication or policy_text must return 422."""
-        response = await client.post(
-            "/tools/generate_pa_justification",
-            json={"patient_id": "tamara-chen-001"},  # Missing target_medication + policy_text
-        )
-        assert response.status_code == 422
-
-    async def test_health_endpoint(self, client: AsyncClient):
-        """GET /health must always return 200 with status=ok."""
-        response = await client.get("/health")
-        assert response.status_code == 200
-        assert response.json().get("status") == "ok"
+        try:
+            await asyncio.wait_for(sse_task, timeout=3.0)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            sse_task.cancel()

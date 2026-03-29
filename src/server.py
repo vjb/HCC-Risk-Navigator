@@ -1,23 +1,18 @@
 """
-src/server.py — FastAPI + MCP Server
-=====================================
-Exposes the Auto-Auth Pre-Cog Engine as an MCP (Model Context Protocol) server
-using HTTP/SSE transport (Streamable HTTP) for integration with Prompt Opinion
-and ngrok tunneling.
+src/server.py — HCC Risk Navigator FastAPI + MCP Server
+========================================================
+Exposes one MCP tool via HTTP/SSE transport:
 
-Three MCP tools are exposed:
-  - get_fhir_context(patient_id)         → Full FHIR context from Mock EHR
-  - hunt_clinical_evidence(patient_id, condition_keyword) → Matching clinical notes
-  - generate_pa_justification(patient_id, target_medication, policy_text) → PA analysis
+  audit_hcc_opportunities(patient_id: str)
+    → Pulls FHIR context from Mock EHR, runs HCC gap detection,
+      returns a structured coding audit report.
 
-REST endpoints (for easy testing via HTTPX):
-  GET  /health                            → Health check
-  POST /tools/get_fhir_context            → Direct REST access to the MCP tool
-  POST /tools/hunt_clinical_evidence      → Direct REST access
-  POST /tools/generate_pa_justification   → Direct REST access
-
-MCP endpoint:
-  /mcp                                    → MCP SSE transport (for Prompt Opinion)
+Endpoints:
+  GET  /health                          → Liveness check
+  POST /tools/audit_hcc_opportunities   → REST wrapper (for testing + curl)
+  GET  /mcp/sse                         → MCP SSE stream (Prompt Opinion connects here)
+  POST /mcp/messages                    → MCP JSON-RPC bus (Prompt Opinion POSTs here)
+  GET  /docs                            → FastAPI Swagger UI
 """
 from __future__ import annotations
 
@@ -37,21 +32,20 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
 )
-logger = logging.getLogger("auto-auth-mcp")
+logger = logging.getLogger("hcc-navigator")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Database bootstrap
 # ─────────────────────────────────────────────────────────────────────────────
 
 from src.database import get_session, init_db
-from src.models import ClinicalNote, MedicationRequest, Observation, Patient
-from src.pa_engine import generate_pa_analysis
+from src.models import ClinicalNote, Condition, Patient
+from src.hcc_engine import audit_hcc_gaps
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize DB tables on startup."""
-    logger.info("🚀 Auto-Auth Pre-Cog MCP Server starting up...")
+    logger.info("🚀 HCC Risk Navigator MCP Server starting up...")
     init_db()
     logger.info("✅ Database initialized.")
     yield
@@ -59,15 +53,15 @@ async def lifespan(app: FastAPI):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FastAPI Application
+# FastAPI App
 # ─────────────────────────────────────────────────────────────────────────────
 
 app = FastAPI(
-    title="Auto-Auth Pre-Cog Engine",
+    title="HCC Risk Navigator",
     description=(
-        "FHIR-native MCP server providing Generative AI Prior Authorization "
-        "reasoning. Exposes get_fhir_context, hunt_clinical_evidence, and "
-        "generate_pa_justification tools for Prompt Opinion integration."
+        "FHIR-native MCP server for Generative AI HCC risk adjustment auditing. "
+        "Identifies uncoded Hierarchical Condition Categories from unstructured "
+        "clinical notes to maximize Medicare Advantage RAF scores."
     ),
     version="0.1.0",
     lifespan=lifespan,
@@ -86,76 +80,52 @@ app.add_middleware(
 # Request / Response Models
 # ─────────────────────────────────────────────────────────────────────────────
 
-class GetFhirContextRequest(BaseModel):
+class AuditRequest(BaseModel):
     patient_id: str
-
-
-class HuntClinicalEvidenceRequest(BaseModel):
-    patient_id: str
-    condition_keyword: str
-
-
-class GeneratePAJustificationRequest(BaseModel):
-    patient_id: str
-    target_medication: str
-    policy_text: str
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Core Tool Logic (shared by REST endpoints and MCP tools)
+# Shared FHIR Context Helper
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _get_patient_or_404(session, patient_id: str) -> Patient:
-    """Look up patient by FHIR ID or raise HTTP 404."""
     patient = session.query(Patient).filter_by(fhir_id=patient_id).first()
     if not patient:
         raise HTTPException(
             status_code=404,
-            detail=f"Patient with FHIR ID '{patient_id}' not found in Mock EHR.",
+            detail=f"Patient '{patient_id}' not found in Mock EHR.",
         )
     return patient
 
 
 def _build_fhir_context(patient: Patient, session) -> dict[str, Any]:
-    """Construct the full FHIR context dict from ORM objects."""
-    medications = session.query(MedicationRequest).filter_by(patient_id=patient.id).all()
-    observations = session.query(Observation).filter_by(patient_id=patient.id).all()
+    """Build the full FHIR context dict for the HCC engine."""
+    conditions = session.query(Condition).filter_by(patient_id=patient.id).all()
     notes = session.query(ClinicalNote).filter_by(patient_id=patient.id).all()
-
     return {
         "patient": {
             "fhir_id": patient.fhir_id,
             "name": patient.name,
             "dob": patient.dob,
             "gender": patient.gender,
+            "insurance_plan": patient.insurance_plan,
         },
-        "medications": [
+        "conditions": [
             {
-                "medication_name": m.medication_name,
-                "dosage": m.dosage,
-                "start_date": m.start_date,
-                "end_date": m.end_date,
-                "status": m.status,
-                "fhir_json": m.fhir_json,
+                "icd10_code": c.icd10_code,
+                "description": c.description,
+                "hcc_code": c.hcc_code,
+                "raf_weight": c.raf_weight,
+                "clinical_status": c.clinical_status,
             }
-            for m in medications
-        ],
-        "observations": [
-            {
-                "loinc_code": o.loinc_code,
-                "display": o.display,
-                "value": o.value,
-                "unit": o.unit,
-                "effective_date": o.effective_date,
-            }
-            for o in observations
+            for c in conditions
         ],
         "clinical_notes": [
             {
                 "note_type": n.note_type,
-                "content": n.content,
                 "authored_date": n.authored_date,
                 "author": n.author,
+                "content": n.content,
             }
             for n in notes
         ],
@@ -163,113 +133,31 @@ def _build_fhir_context(patient: Patient, session) -> dict[str, Any]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# REST Endpoints (primary interface for testing + REST clients)
+# REST Endpoints
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for uptime monitoring and load balancers."""
-    return {"status": "ok", "service": "Auto-Auth Pre-Cog Engine", "version": "0.1.0"}
+    return {"status": "ok", "service": "HCC Risk Navigator", "version": "0.1.0"}
 
 
-@app.post("/tools/get_fhir_context")
-async def tool_get_fhir_context(request: GetFhirContextRequest):
+@app.post("/tools/audit_hcc_opportunities")
+async def tool_audit_hcc_opportunities(request: AuditRequest):
     """
-    MCP Tool: get_fhir_context
-    Returns the full FHIR context for a patient (demographics, medications,
-    observations, clinical notes) from the Mock EHR SQLite database.
-    
-    SHARP Extension: Accepts patient_id propagated from the Prompt Opinion platform.
+    REST wrapper for the audit_hcc_opportunities MCP tool.
+    Accessible via curl for testing without an MCP client.
+
+    SHARP Extension: patient_id is the FHIR patient ID propagated from Prompt Opinion.
     """
-    logger.info(f"🔍 get_fhir_context called for patient_id={request.patient_id!r}")
-    session = get_session()
-    try:
-        patient = _get_patient_or_404(session, request.patient_id)
-        context = _build_fhir_context(patient, session)
-        logger.info(
-            f"✅ Returning FHIR context: "
-            f"{len(context['medications'])} meds, "
-            f"{len(context['observations'])} obs, "
-            f"{len(context['clinical_notes'])} notes"
-        )
-        return context
-    finally:
-        session.close()
-
-
-@app.post("/tools/hunt_clinical_evidence")
-async def tool_hunt_clinical_evidence(request: HuntClinicalEvidenceRequest):
-    """
-    MCP Tool: hunt_clinical_evidence
-    Searches clinical notes for a given condition keyword (case-insensitive).
-    Returns a list of matching notes with excerpts.
-    
-    SHARP Extension: Accepts patient_id and condition_keyword from the orchestrating agent.
-    """
-    logger.info(
-        f"🩺 hunt_clinical_evidence called: "
-        f"patient={request.patient_id!r}, keyword={request.condition_keyword!r}"
-    )
-    session = get_session()
-    try:
-        patient = _get_patient_or_404(session, request.patient_id)
-        notes = session.query(ClinicalNote).filter_by(patient_id=patient.id).all()
-
-        keyword_lower = request.condition_keyword.lower()
-        matching = [
-            {
-                "note_type": n.note_type,
-                "authored_date": n.authored_date,
-                "author": n.author,
-                "content": n.content,
-                "excerpt": n.content[:300] + "..." if len(n.content) > 300 else n.content,
-            }
-            for n in notes
-            if keyword_lower in n.content.lower()
-        ]
-
-        logger.info(f"🔎 Found {len(matching)} matching notes for keyword={request.condition_keyword!r}")
-        return {
-            "patient_id": request.patient_id,
-            "keyword": request.condition_keyword,
-            "matching_notes": matching,
-            "total_notes_searched": len(notes),
-        }
-    finally:
-        session.close()
-
-
-@app.post("/tools/generate_pa_justification")
-async def tool_generate_pa_justification(request: GeneratePAJustificationRequest):
-    """
-    MCP Tool: generate_pa_justification
-    Triggers the full AI Prior Authorization reasoning pipeline:
-      1. Loads FHIR context from Mock EHR.
-      2. Runs deterministic step-therapy + clinical evidence analysis.
-      3. Calls GPT-4o-mini to validate and draft the PA exception letter.
-    Returns a complete structured PA analysis payload.
-    
-    SHARP Extension: Accepts patient_id, target_medication, and policy_text from the agent.
-    """
-    logger.info(
-        f"⚕️ generate_pa_justification called: "
-        f"patient={request.patient_id!r}, medication={request.target_medication!r}"
-    )
+    logger.info(f"🔍 audit_hcc_opportunities called for patient_id={request.patient_id!r}")
     session = get_session()
     try:
         patient = _get_patient_or_404(session, request.patient_id)
         fhir_context = _build_fhir_context(patient, session)
-
-        result = generate_pa_analysis(
-            fhir_context=fhir_context,
-            target_medication=request.target_medication,
-            policy_text=request.policy_text,
-        )
-
+        result = audit_hcc_gaps(fhir_context)
         logger.info(
-            f"📋 PA analysis complete: "
-            f"step_therapy_met={result['step_therapy_met']}, "
-            f"exception_found={result['exception_found']}"
+            f"📊 Audit complete: {result['gap_count']} gaps found, "
+            f"RAF {result['current_raf']} → {result['projected_raf']}"
         )
         return result
     finally:
@@ -277,99 +165,60 @@ async def tool_generate_pa_justification(request: GeneratePAJustificationRequest
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MCP SSE Transport (for Prompt Opinion integration)
+# MCP SSE Transport (for Prompt Opinion integration via ngrok)
 # ─────────────────────────────────────────────────────────────────────────────
 
 try:
     from mcp.server.fastmcp import FastMCP
     from mcp.server.transport_security import TransportSecuritySettings
 
-    # Disable DNS rebinding protection for local dev/test.
-    # Production ngrok tunnels use real HTTPS hostnames (valid Host headers).
-    # ASGI test clients use 'localhost' which the default MCP security rejects,
-    # so we disable the check globally for this local server.
-    _transport_security = TransportSecuritySettings(
+    mcp_server = FastMCP(
+        name="hcc-risk-navigator",
+        instructions=(
+            "HCC Risk Adjustment Audit Engine. Call audit_hcc_opportunities(patient_id) "
+            "to analyze a patient's FHIR context for uncoded HCC conditions. "
+            "Returns suspected ICD-10 codes, evidence quotes from clinical notes, "
+            "and projected RAF score improvement."
+        ),
+    )
+    mcp_server.settings.transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=False,
     )
 
-    mcp_server = FastMCP(
-        name="auto-auth-pre-cog",
-        instructions=(
-            "Prior Authorization AI Engine. Use get_fhir_context to retrieve "
-            "patient records, hunt_clinical_evidence to find exception evidence, "
-            "and generate_pa_justification to produce a complete PA analysis."
-        ),
-    )
-    mcp_server.settings.transport_security = _transport_security
-
     @mcp_server.tool()
-    async def get_fhir_context(patient_id: str) -> dict:
+    async def audit_hcc_opportunities(patient_id: str) -> dict:
         """
-        Retrieve full FHIR R4 context for a patient from the Mock EHR.
-        Returns demographics, medication history, lab observations, and clinical notes.
+        Analyze a patient's FHIR chart for uncoded Hierarchical Condition Categories (HCCs).
+
+        Pulls the patient's structured problem list and unstructured clinical notes from
+        the Mock EHR, then uses GPT-4o-mini to identify conditions that are documented
+        in the notes but missing from the coded diagnosis list.
+
+        Returns a full audit report including:
+          - Current and projected RAF scores
+          - Per-gap ICD-10 recommendations
+          - Evidence quotes from clinical documentation
+          - Clinical rationale for each recommendation
+
+        Args:
+            patient_id: FHIR patient ID (from SHARP context propagation)
         """
+        logger.info(f"🩺 MCP tool: audit_hcc_opportunities({patient_id!r})")
         session = get_session()
         try:
             patient = session.query(Patient).filter_by(fhir_id=patient_id).first()
             if not patient:
-                return {"error": f"Patient '{patient_id}' not found"}
-            return _build_fhir_context(patient, session)
-        finally:
-            session.close()
-
-    @mcp_server.tool()
-    async def hunt_clinical_evidence(patient_id: str, condition_keyword: str) -> dict:
-        """
-        Search clinical notes for evidence of a specific condition or adverse reaction.
-        Use this to find documented exceptions to step-therapy requirements.
-        """
-        session = get_session()
-        try:
-            patient = session.query(Patient).filter_by(fhir_id=patient_id).first()
-            if not patient:
-                return {"error": f"Patient '{patient_id}' not found", "matching_notes": []}
-            notes = session.query(ClinicalNote).filter_by(patient_id=patient.id).all()
-            keyword_lower = condition_keyword.lower()
-            matching = [
-                {
-                    "note_type": n.note_type,
-                    "authored_date": n.authored_date,
-                    "content": n.content,
-                }
-                for n in notes if keyword_lower in n.content.lower()
-            ]
-            return {"patient_id": patient_id, "keyword": condition_keyword, "matching_notes": matching}
-        finally:
-            session.close()
-
-    @mcp_server.tool()
-    async def generate_pa_justification(
-        patient_id: str,
-        target_medication: str,
-        policy_text: str,
-    ) -> dict:
-        """
-        Generate a complete Prior Authorization analysis including step-therapy assessment,
-        clinical exception evaluation, and a drafted PA exception letter ready for submission.
-        """
-        session = get_session()
-        try:
-            patient = session.query(Patient).filter_by(fhir_id=patient_id).first()
-            if not patient:
-                return {"error": f"Patient '{patient_id}' not found"}
+                return {"error": f"Patient '{patient_id}' not found", "gaps": []}
             fhir_context = _build_fhir_context(patient, session)
-            return generate_pa_analysis(
-                fhir_context=fhir_context,
-                target_medication=target_medication,
-                policy_text=policy_text,
+            result = audit_hcc_gaps(fhir_context)
+            logger.info(
+                f"📊 MCP audit complete: {result['gap_count']} gaps, "
+                f"RAF delta +{result['raf_delta']}"
             )
+            return result
         finally:
             session.close()
 
-    # Mount MCP SSE transport at /mcp
-    # sse_app() exposes:
-    #   GET  /mcp/sse       → text/event-stream (Prompt Opinion connects here)
-    #   POST /mcp/messages  → JSON-RPC 2.0 message bus (Prompt Opinion POSTs here)
     mcp_app = mcp_server.sse_app()
     app.mount("/mcp", mcp_app)
     logger.info("✅ MCP SSE transport mounted at /mcp/sse and /mcp/messages")
@@ -388,9 +237,9 @@ if __name__ == "__main__":
     host = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
     port = int(os.getenv("MCP_SERVER_PORT", "8000"))
 
-    print(f"\n🚀 Auto-Auth Pre-Cog MCP Server")
+    print(f"\n🏥 HCC Risk Navigator MCP Server")
     print(f"   REST API  → http://{host}:{port}")
-    print(f"   MCP/SSE   → http://{host}:{port}/mcp")
+    print(f"   MCP/SSE   → http://{host}:{port}/mcp/sse")
     print(f"   Health    → http://{host}:{port}/health")
     print(f"   Docs      → http://{host}:{port}/docs\n")
 
