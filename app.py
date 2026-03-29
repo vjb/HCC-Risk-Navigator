@@ -566,32 +566,28 @@ with col_left:
             if cond.hcc_code else
             '<span style="color:#9ca3af; font-size:12px;">—</span>'
         )
-        rows_html += f"""
-        <tr>
-            <td><span class="code-tag">{cond.icd10_code}</span></td>
-            <td style="font-weight:500;">{cond.description}</td>
-            <td>{hcc_html}</td>
-            <td>{status_html}</td>
-        </tr>
-        """
+        rows_html += f"""<tr>
+<td><span class="code-tag">{cond.icd10_code}</span></td>
+<td style="font-weight:500;">{cond.description}</td>
+<td>{hcc_html}</td>
+<td>{status_html}</td>
+</tr>"""
 
-    st.markdown(f"""
-    <div class="card">
-        <table class="prob-table">
-            <thead>
-                <tr>
-                    <th>ICD-10</th>
-                    <th>Description</th>
-                    <th>HCC / RAF Weight</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {rows_html}
-            </tbody>
-        </table>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="card">
+<table class="prob-table">
+<thead>
+<tr>
+<th>ICD-10</th>
+<th>Description</th>
+<th>HCC / RAF Weight</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+{rows_html}
+</tbody>
+</table>
+</div>""", unsafe_allow_html=True)
 
 with col_right:
     st.markdown('<div class="section-heading">RAF Score Audit</div>', unsafe_allow_html=True)
