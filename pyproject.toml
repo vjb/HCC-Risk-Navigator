@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "auto-auth-pre-cog"
+name = "hcc-risk-navigator"
 version = "0.1.0"
-description = "FHIR-native MCP server for AI-driven Prior Authorization reasoning"
+description = "FHIR-native MCP server for AI-driven HCC Risk Adjustment reasoning"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.111.0",

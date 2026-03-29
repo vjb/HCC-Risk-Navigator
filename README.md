@@ -1,17 +1,19 @@
-# Auto-Auth Pre-Cog Engine 🏥⚡
+# HCC Risk Navigator 🏥⚡
 
 > **Hackathon:** Agents Assemble — The Healthcare AI Endgame (Prompt Opinion)
 > **Category:** Superpower MCP Server (Option 1 — Interoperability)
 
-A **FHIR-native Model Context Protocol (MCP) server** that acts as a Generative AI Prior Authorization reasoning engine. Built for the Prompt Opinion platform to demonstrate the "Last Mile" of healthcare AI: not just summarizing data, but producing a **final, submittable PA Exception Request**.
+A **FHIR-native Model Context Protocol (MCP) server** that acts as a Generative AI HCC Risk Adjustment auditing engine. Built for the Prompt Opinion platform to demonstrate the "Last Mile" of healthcare AI: not just summarizing data, but identifying **uncoded conditions in unstructured clinical notes to maximize Medicare Advantage RAF scores**.
 
 ---
 
 ## The Problem
 
-Ozempic prior authorizations are denied **80%+ of the time** on first submission. Most denials are step-therapy failures — the insurance company requires proof that cheaper drugs (like Metformin) were tried first. But what if the patient *couldn't tolerate* that drug? A human has to manually hunt through clinical notes, match it to policy language, and draft a legal-quality exception letter. This takes hours.
+Medicare Advantage plans rely on accurate HCC (Hierarchical Condition Category) coding to ensure appropriate care and funding (Risk Adjustment Factor, or RAF). Often, doctors document a condition in the unstructured text of a clinical note, but fail to add the specific ICD-10 code to the patient's problem list. This "HCC Gap" results in lower RAF scores, undervalued patient acuity, and lost revenue.
 
-**We automated it in seconds.**
+Manual chart audits take hours per patient.
+
+**We automated it.**
 
 ---
 
@@ -26,19 +28,17 @@ Prompt Opinion Agent (cloud)
          │
          ▼
 ┌──────────────────────────────────────┐
-│   Auto-Auth Pre-Cog MCP Server       │
-│   (FastAPI + MCP SSE transport)      │
+│  HCC Risk Navigator MCP Server       │
+│  (FastAPI + MCP SSE transport)       │
 │                                      │
 │  GET  /mcp/sse    ← agent connects   │
 │  POST /mcp/messages ← JSON-RPC calls │
 │                                      │
 │  Tools:                              │
-│  ┌─ get_fhir_context(patient_id)     │
-│  ├─ hunt_clinical_evidence(id, kw)   │
-│  └─ generate_pa_justification(...)   │
+│  └─ audit_hcc_opportunities(id)      │
 │              │                       │
 │              ▼                       │
-│       pa_engine.py (GPT-4o-mini)     │
+│      hcc_engine.py (GPT-4o)          │
 │              │                       │
 │              ▼                       │
 │     SQLite Mock EHR (FHIR R4)        │
@@ -52,7 +52,7 @@ Prompt Opinion Agent (cloud)
 ### 1. Clone & Set Up Environment
 
 ```bash
-git clone <repo>
+git clone https://github.com/vjb/HCC-Risk-Navigator.git
 cd FIRE
 
 python -m venv venv
@@ -76,10 +76,10 @@ copy .env.example .env
 python scripts/seed_db.py
 ```
 
-This creates `data/mock_ehr.sqlite` with patient **Tamara Chen**:
-- 2 months of Metformin 500mg (completed — step therapy incomplete)
-- 3 A1C lab results (7.8% → 8.1% → 8.6% — rising, poorly controlled)
-- 1 clinical progress note documenting **severe GI intolerance** + Metformin discontinuation
+This creates `data/mock_ehr.sqlite` with patient **Tamara Williams** (`tamara-williams-001`):
+- Currently coded: `E11.9` (Type 2 Diabetes, HCC 19, RAF 0.104)
+- Missing code (HCC Gap): `E11.40` (Diabetic Neuropathy, HCC 18, RAF 0.302)
+- Clinical evidence in unstructured notes: "burning sensation in both feet ... Gabapentin"
 
 ### 4. Run Tests (TDD — Failing First, Then Green)
 
@@ -129,37 +129,25 @@ ngrok http 8000
 
 ## MCP Tools Reference
 
-### `get_fhir_context(patient_id: str)`
-Returns the full FHIR R4 context for a patient:
+### `audit_hcc_opportunities(patient_id: str)`
+Analyze a patient's FHIR chart for uncoded Hierarchical Condition Categories (HCCs). Returns projected RAF score improvements and clinical evidence quotes.
 ```json
 {
-  "patient": { "name": "Tamara Chen", "dob": "1978-04-15", ... },
-  "medications": [{ "medication_name": "Metformin", "start_date": "...", "end_date": "...", "status": "completed" }],
-  "observations": [{ "loinc_code": "4548-4", "value": 8.6, "unit": "%" }],
-  "clinical_notes": [{ "content": "...severe GI intolerance...", "authored_date": "..." }]
-}
-```
-
-### `hunt_clinical_evidence(patient_id: str, condition_keyword: str)`
-Searches clinical notes for exception evidence:
-```json
-{
-  "patient_id": "tamara-chen-001",
-  "keyword": "GI intolerance",
-  "matching_notes": [{ "note_type": "Progress Note", "content": "..." }]
-}
-```
-
-### `generate_pa_justification(patient_id: str, target_medication: str, policy_text: str)`
-Full AI reasoning pipeline → structured PA analysis:
-```json
-{
-  "step_therapy_met": false,
-  "therapy_duration_days": 61,
-  "required_duration_days": 180,
-  "exception_found": true,
-  "exception_evidence": "Clinical note documents severe GI intolerance...",
-  "pa_letter": "PRIOR AUTHORIZATION EXCEPTION REQUEST\n\nTo: Aetna..."
+  "gap_count": 1,
+  "current_raf": 0.104,
+  "projected_raf": 0.302,
+  "raf_delta": 0.198,
+  "gaps": [
+    {
+      "uncoded_icd10": "E11.40",
+      "uncoded_description": "Type 2 diabetes mellitus with diabetic neuropathy",
+      "hcc_category": 18,
+      "raf_weight": 0.302,
+      "clinical_evidence_quote": "worsening numbness and a burning sensation in both feet... Gabapentin 300mg",
+      "rationale": "Patient is actively treated for diabetic neuropathy with Gabapentin, but only generic diabetes E11.9 is coded."
+    }
+  ],
+  "message": "Audit complete."
 }
 ```
 
@@ -177,7 +165,7 @@ See [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) for the complete 3-minute video
 |---|---|
 | MCP Server | `mcp` Python SDK (SSE transport) |
 | API Framework | FastAPI + uvicorn |
-| AI Reasoning | OpenAI GPT-4o-mini |
+| AI Reasoning | OpenAI GPT-4o |
 | Database | SQLite via SQLAlchemy ORM |
 | Data Standard | FHIR R4 (`fhir.resources`) |
 | Synthetic Data | Faker |
@@ -194,14 +182,14 @@ FIRE/
 ├── src/
 │   ├── database.py            # SQLAlchemy engine + session
 │   ├── models.py              # ORM models (Patient, Medications, etc.)
-│   ├── pa_engine.py           # AI PA reasoning core
+│   ├── hcc_engine.py          # AI HCC Risk Adjustment gap detection core
 │   └── server.py              # FastAPI + MCP SSE server
 ├── scripts/
 │   └── seed_db.py             # Synthetic FHIR data seeder
 ├── tests/
 │   ├── conftest.py            # Shared fixtures
 │   ├── test_seed_db.py        # Data layer TDD tests
-│   ├── test_pa_reasoning.py   # PA engine TDD tests
+│   ├── test_hcc_auditor.py    # HCC gap engine TDD tests
 │   ├── test_mcp_server.py     # MCP SSE transport tests
 │   └── test_ui.py             # Playwright UI tests
 └── docs/
