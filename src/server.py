@@ -417,10 +417,11 @@ try:
         options.capabilities.extensions = {
             "ai.promptopinion/fhir-context": {
                 "scopes": [
-                    {"name": "patient/Patient.rs", "required": True},
-                    {"name": "patient/Condition.rs", "required": True},
+                    {"name": "patient/Patient.rs",           "required": True},
+                    {"name": "patient/Condition.rs",         "required": True},
                     {"name": "patient/DocumentReference.rs", "required": True},
-                    {"name": "offline_access"}
+                    {"name": "system/Patient.rs",            "required": True},  # cohort sweep
+                    {"name": "offline_access"},
                 ]
             }
         }
