@@ -1,19 +1,21 @@
 """
-TDD Phase 2 — HCC Auditor Engine Tests (written BEFORE implementation).
+tests/test_hcc_auditor.py — HCC Engine deterministic unit tests.
+
+The hcc_engine module performs pure FHIR data extraction + RAF computation.
+No LLM calls are made — Po's agent performs the CDI gap analysis using the
+structured clinical context this engine returns.
 
 Tests assert that audit_hcc_gaps():
-  1. Correctly computes current RAF from coded conditions.
-  2. Identifies E11.40 as a gap when "burning feet" is in the note.
-  3. Returns evidence_quote from the actual note text.
-  4. Projects a higher RAF after gap capture.
-  5. Returns all required output keys.
-  6. Handles a patient with zero HCC gaps gracefully.
+  1. Correctly computes current RAF from coded conditions (deterministic).
+  2. Returns all required output keys.
+  3. Returns clinical_notes_text for Po's agent to review.
+  4. Returns hcc_reference_v28 as context for Po's agent.
+  5. Always returns gaps=[] and gap_count=0 (gaps are found by Po, not the engine).
+  6. Handles patients with no notes or no conditions gracefully.
 """
 from __future__ import annotations
 
-import json
 from datetime import date, timedelta
-from unittest.mock import patch
 
 import pytest
 
@@ -21,12 +23,12 @@ from src.hcc_engine import audit_hcc_gaps, compute_raf, HCC_MAP
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Fixtures
+# Shared FHIR fixtures
 # ─────────────────────────────────────────────────────────────────────────────
 
 @pytest.fixture()
 def tamara_fhir_context() -> dict:
-    """Simulates the output of get_fhir_context('tamara-williams-001')."""
+    """Standard Tamara Williams FHIR context: one coded condition, one clinical note."""
     return {
         "patient": {
             "resourceType": "Patient",
@@ -35,8 +37,9 @@ def tamara_fhir_context() -> dict:
             "birthDate": "1956-03-12",
             "gender": "female",
             "extension": [
-                {"url": "http://promptopinion.com/fhir/insurance-plan", "valueString": "Medicare Advantage"}
-            ]
+                {"url": "http://promptopinion.com/fhir/insurance-plan",
+                 "valueString": "Medicare Advantage"}
+            ],
         },
         "conditions": [
             {
@@ -44,13 +47,17 @@ def tamara_fhir_context() -> dict:
                 "id": "condition-1",
                 "clinicalStatus": {"coding": [{"code": "active"}]},
                 "code": {
-                    "coding": [{"system": "http://hl7.org/fhir/sid/icd-10-cm", "code": "E11.9", "display": "Type 2 diabetes mellitus without complications"}],
-                    "text": "Type 2 diabetes mellitus without complications"
+                    "coding": [{
+                        "system": "http://hl7.org/fhir/sid/icd-10-cm",
+                        "code": "E11.9",
+                        "display": "Type 2 diabetes mellitus without complications",
+                    }],
+                    "text": "Type 2 diabetes mellitus without complications",
                 },
                 "extension": [
-                    {"url": "http://promptopinion.com/fhir/hcc-code", "valueInteger": 19},
-                    {"url": "http://promptopinion.com/fhir/raf-weight", "valueDecimal": 0.104}
-                ]
+                    {"url": "http://promptopinion.com/fhir/hcc-code",     "valueInteger": 19},
+                    {"url": "http://promptopinion.com/fhir/raf-weight", "valueDecimal": 0.104},
+                ],
             }
         ],
         "clinical_notes": [
@@ -67,77 +74,75 @@ def tamara_fhir_context() -> dict:
                     "extremity involved. Symptoms consistent with peripheral neuropathy. "
                     "Gabapentin 300mg TID prescribed for symptom management. "
                     "Patient to follow up in 6 weeks."
-                )}}]
+                )}}],
             }
         ],
     }
 
 
 @pytest.fixture()
-def mock_llm_gap_response() -> str:
-    """Simulated LLM response identifying the E11.40 gap."""
-    return json.dumps({
-        "gaps": [
-            {
-                "suspected_icd10": "E11.40",
-                "suspected_hcc": 18,
-                "description": "Type 2 diabetes mellitus with diabetic neuropathy, unspecified",
-                "evidence_quote": "worsening numbness and a burning sensation in both feet over the last 3 months",
-                "clinical_rationale": (
-                    "The clinical documentation describes bilateral lower extremity numbness "
-                    "and burning consistent with diabetic peripheral neuropathy. Gabapentin "
-                    "prescription further supports this diagnosis. Code E11.40 is appropriate."
-                ),
-                "raf_delta": 0.302,
-                "confidence": "HIGH",
-                "draft_clinician_query": "Dr. Nakamura, your note mentions burning and gabapentin, but E11.40 is not coded. Do you agree to amend the chart?"
-            }
-        ],
-        "audit_summary": (
-            "One HCC coding gap identified. The clinical note documents symptoms of "
-            "diabetic peripheral neuropathy (burning feet, numbness) with Gabapentin "
-            "prescribed, but E11.40 is absent from the problem list. Recommend adding "
-            "E11.40 to accurately reflect HCC 18 and increase RAF from 0.104 to 0.302."
-        ),
-    })
+def empty_fhir_context() -> dict:
+    """Patient with no conditions and no clinical notes."""
+    return {
+        "patient": {
+            "resourceType": "Patient",
+            "id": "empty-patient-001",
+            "name": [{"text": "Empty Patient"}],
+        },
+        "conditions":     [],
+        "clinical_notes": [],
+    }
 
 
 @pytest.fixture()
-def mock_llm_no_gaps_response() -> str:
-    """Simulated LLM response with no gaps found."""
-    return json.dumps({
-        "gaps": [],
-        "audit_summary": "No HCC coding gaps identified. The problem list appears complete.",
-    })
+def multi_condition_context() -> dict:
+    """Patient with multiple HCC-coded conditions."""
+    return {
+        "patient": {
+            "resourceType": "Patient",
+            "id": "multi-001",
+            "name": [{"text": "Multi Condition"}],
+        },
+        "conditions": [
+            {
+                "resourceType": "Condition",
+                "code": {"coding": [{"code": "E11.9", "display": "T2DM"}]},
+            },
+            {
+                "resourceType": "Condition",
+                "code": {"coding": [{"code": "I50.9", "display": "Heart failure"}]},
+            },
+            {
+                "resourceType": "Condition",
+                "code": {"coding": [{"code": "N18.3", "display": "CKD Stage 3"}]},
+            },
+        ],
+        "clinical_notes": [],
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# compute_raf() unit tests — no LLM needed
+# TestComputeRAF — pure deterministic unit tests
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestComputeRAF:
     def test_single_hcc_code(self):
         """E11.9 alone should yield RAF 0.104."""
-        result = compute_raf(["E11.9"])
-        assert abs(result - 0.104) < 0.001
+        assert abs(compute_raf(["E11.9"]) - 0.104) < 0.001
 
     def test_multiple_hcc_codes(self):
         """E11.9 + I50.9 should sum their RAFs."""
-        result = compute_raf(["E11.9", "I50.9"])
         expected = 0.104 + 0.331
-        assert abs(result - expected) < 0.001
+        assert abs(compute_raf(["E11.9", "I50.9"]) - expected) < 0.001
 
     def test_no_duplicate_hcc_codes(self):
-        """E11.9 and E11.65 both map to different HCCs, both should be counted."""
-        # E11.9 = HCC 19 (RAF 0.104), E11.65 = HCC 18 (RAF 0.302) — different HCCs
-        result = compute_raf(["E11.9", "E11.65"])
+        """E11.9 (HCC 19) and E11.65 (HCC 18) are different HCCs — both counted."""
         expected = 0.104 + 0.302
-        assert abs(result - expected) < 0.001
+        assert abs(compute_raf(["E11.9", "E11.65"]) - expected) < 0.001
 
     def test_non_hcc_code_excluded(self):
-        """I10 (hypertension) has HCC 0 and should not add to RAF."""
-        result = compute_raf(["I10"])
-        assert result == 0.0
+        """I10 (hypertension) has HCC 0 and must not add to RAF."""
+        assert compute_raf(["I10"]) == 0.0
 
     def test_empty_code_list(self):
         assert compute_raf([]) == 0.0
@@ -145,112 +150,179 @@ class TestComputeRAF:
     def test_unknown_code_ignored(self):
         assert compute_raf(["Z99.99Z"]) == 0.0
 
+    def test_three_hcc_codes_sum_correctly(self):
+        """E11.9 + I50.9 + N18.3 should sum to 0.104 + 0.331 + 0.289 = 0.724."""
+        expected = 0.104 + 0.331 + 0.289
+        assert abs(compute_raf(["E11.9", "I50.9", "N18.3"]) - expected) < 0.001
+
 
 # ─────────────────────────────────────────────────────────────────────────────
-# audit_hcc_gaps() — with mocked LLM
+# TestAuditOutputStructure — required keys and types
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestHCCGapDetection:
-    def test_gap_found_for_burning_feet_note(self, tamara_fhir_context, mock_llm_gap_response):
-        """The engine must identify E11.40 as a gap from the burning feet note."""
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        assert result["gap_count"] >= 1
-        gap_codes = [g["suspected_icd10"] for g in result["gaps"]]
-        assert "E11.40" in gap_codes, f"Expected E11.40 in gaps, got {gap_codes}"
+class TestAuditOutputStructure:
+    """The audit result must always have a predictable, complete shape."""
 
-    def test_evidence_quote_is_returned(self, tamara_fhir_context, mock_llm_gap_response):
-        """Each gap must have a non-empty evidence_quote from the note."""
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        for gap in result["gaps"]:
-            assert gap["evidence_quote"], f"Gap {gap['suspected_icd10']} has no evidence_quote"
+    REQUIRED_KEYS = {
+        "patient_id", "patient_name",
+        "current_raf", "projected_raf", "raf_delta",
+        "existing_codes", "coded_conditions_detail",
+        "clinical_notes_text", "note_count",
+        "hcc_reference_v28",
+        "gaps", "gap_count",
+        "audit_summary",
+    }
 
-    def test_confidence_level_present(self, tamara_fhir_context, mock_llm_gap_response):
-        """Each gap must have a confidence level (HIGH/MEDIUM/LOW)."""
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        for gap in result["gaps"]:
-            assert gap["confidence"] in ("HIGH", "MEDIUM", "LOW")
+    def test_all_required_keys_present(self, tamara_fhir_context):
+        result = audit_hcc_gaps(tamara_fhir_context)
+        missing = self.REQUIRED_KEYS - result.keys()
+        assert not missing, f"audit_hcc_gaps() missing keys: {missing}"
 
-    def test_no_gaps_returns_empty_list(self, tamara_fhir_context, mock_llm_no_gaps_response):
-        """When no gaps are found, gaps must be an empty list — not None or missing."""
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_no_gaps_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
+    def test_patient_name_is_tamara(self, tamara_fhir_context):
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert "Tamara" in result["patient_name"]
+
+    def test_patient_id_is_correct(self, tamara_fhir_context):
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert result["patient_id"] == "tamara-williams-001"
+
+    def test_existing_codes_is_list(self, tamara_fhir_context):
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert isinstance(result["existing_codes"], list)
+
+    def test_existing_codes_contains_e11_9(self, tamara_fhir_context):
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert "E11.9" in result["existing_codes"]
+
+    def test_gaps_is_always_empty_list(self, tamara_fhir_context):
+        """Gaps are populated by Po's agent — the engine always returns []."""
+        result = audit_hcc_gaps(tamara_fhir_context)
         assert result["gaps"] == []
         assert result["gap_count"] == 0
 
-
-class TestRAFProjection:
-    def test_current_raf_is_0_104(self, tamara_fhir_context, mock_llm_gap_response):
-        """Tamara's current RAF (E11.9 only) must be 0.104."""
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        assert abs(result["current_raf"] - 0.104) < 0.001, (
-            f"Expected current_raf=0.104, got {result['current_raf']}"
-        )
-
-    def test_projected_raf_is_higher_after_gap_capture(self, tamara_fhir_context, mock_llm_gap_response):
-        """Projected RAF must be higher than current RAF when gaps are found."""
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        assert result["projected_raf"] > result["current_raf"], (
-            f"Projected RAF ({result['projected_raf']}) must exceed current RAF ({result['current_raf']})"
-        )
-
-    def test_e11_40_adds_correct_raf_delta(self, tamara_fhir_context, mock_llm_gap_response):
-        """Adding E11.40 (HCC 18) should bring RAF to 0.302 (replaces HCC 19 with HCC 18)."""
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        # E11.40 is HCC 18 (RAF 0.302) — different from current HCC 19 (RAF 0.104)
-        assert result["projected_raf"] >= 0.302, (
-            f"Expected projected_raf ≥ 0.302, got {result['projected_raf']}"
-        )
-
-    def test_raf_delta_is_positive(self, tamara_fhir_context, mock_llm_gap_response):
-        """RAF delta must be positive when coding gaps are found."""
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        assert result["raf_delta"] > 0
-
-    def test_raf_delta_is_zero_when_no_gaps(self, tamara_fhir_context, mock_llm_no_gaps_response):
-        """RAF delta must be 0.0 when no gaps are found."""
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_no_gaps_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        assert result["raf_delta"] == 0.0
-
-
-class TestOutputStructure:
-    def test_all_required_keys_present(self, tamara_fhir_context, mock_llm_gap_response):
-        """Audit result must have all required top-level keys."""
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        required = {
-            "patient_id", "patient_name", "current_raf", "projected_raf",
-            "raf_delta", "existing_codes", "gaps", "audit_summary", "gap_count",
-        }
-        missing = required - set(result.keys())
-        assert not missing, f"Missing keys: {missing}"
-
-    def test_patient_name_is_tamara(self, tamara_fhir_context, mock_llm_gap_response):
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        assert "Tamara" in result["patient_name"]
-
-    def test_existing_codes_contains_e11_9(self, tamara_fhir_context, mock_llm_gap_response):
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        assert "E11.9" in result["existing_codes"]
-
-    def test_audit_summary_is_non_empty_string(self, tamara_fhir_context, mock_llm_gap_response):
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
+    def test_audit_summary_is_non_empty_string(self, tamara_fhir_context):
+        result = audit_hcc_gaps(tamara_fhir_context)
         assert isinstance(result["audit_summary"], str)
         assert len(result["audit_summary"]) > 10
 
-    def test_draft_clinician_query_is_present(self, tamara_fhir_context, mock_llm_gap_response):
-        with patch("src.hcc_engine._call_llm", return_value=mock_llm_gap_response):
-            result = audit_hcc_gaps(tamara_fhir_context)
-        for gap in result["gaps"]:
-            assert "draft_clinician_query" in gap
-            assert isinstance(gap["draft_clinician_query"], str)
+    def test_raf_delta_is_zero_no_llm_analysis(self, tamara_fhir_context):
+        """Before Po's agent analysis, raf_delta is always 0.0."""
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert result["raf_delta"] == 0.0
+
+    def test_projected_raf_equals_current_raf_before_analysis(self, tamara_fhir_context):
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert result["projected_raf"] == result["current_raf"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestRAFComputation — deterministic RAF from FHIR conditions
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestRAFComputation:
+    def test_current_raf_is_0_104_for_e11_9_only(self, tamara_fhir_context):
+        """Tamara has only E11.9 coded — RAF must be 0.104."""
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert abs(result["current_raf"] - 0.104) < 0.001
+
+    def test_empty_patient_has_zero_raf(self, empty_fhir_context):
+        result = audit_hcc_gaps(empty_fhir_context)
+        assert result["current_raf"] == 0.0
+
+    def test_multi_condition_raf_is_summed(self, multi_condition_context):
+        """E11.9 + I50.9 + N18.3 → RAF 0.104 + 0.331 + 0.289 = 0.724."""
+        result = audit_hcc_gaps(multi_condition_context)
+        expected = 0.104 + 0.331 + 0.289
+        assert abs(result["current_raf"] - expected) < 0.001
+
+    def test_coded_conditions_detail_includes_hcc_info(self, tamara_fhir_context):
+        """coded_conditions_detail must have icd10, hcc_code, raf_weight."""
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert len(result["coded_conditions_detail"]) > 0
+        detail = result["coded_conditions_detail"][0]
+        assert "icd10"      in detail
+        assert "hcc_code"   in detail
+        assert "raf_weight" in detail
+        assert detail["icd10"] == "E11.9"
+        assert detail["hcc_code"] == 19
+        assert abs(detail["raf_weight"] - 0.104) < 0.001
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestClinicalNotesContext — Po's agent CDI data
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestClinicalNotesContext:
+    """
+    The engine must return rich clinical context so Po's agent can do CDI analysis.
+    These tests validate the data that Po's LLM will act on.
+    """
+
+    def test_clinical_notes_text_is_non_empty(self, tamara_fhir_context):
+        """clinical_notes_text must contain the note content."""
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert len(result["clinical_notes_text"]) > 50
+
+    def test_clinical_notes_text_contains_key_evidence(self, tamara_fhir_context):
+        """The burning feet evidence must be in clinical_notes_text for Po to analyze."""
+        result = audit_hcc_gaps(tamara_fhir_context)
+        notes = result["clinical_notes_text"].lower()
+        assert "burning" in notes or "neuropathy" in notes or "gabapentin" in notes, (
+            "Key neuropathy evidence missing from clinical_notes_text"
+        )
+
+    def test_clinical_notes_text_includes_author_and_date(self, tamara_fhir_context):
+        """Notes must be labelled with author/date for attribution."""
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert "Dr. Nakamura" in result["clinical_notes_text"]
+
+    def test_note_count_is_correct(self, tamara_fhir_context):
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert result["note_count"] == 1
+
+    def test_empty_patient_notes_text_is_placeholder(self, empty_fhir_context):
+        """A patient with no notes should return a clear placeholder."""
+        result = audit_hcc_gaps(empty_fhir_context)
+        assert "No clinical notes" in result["clinical_notes_text"]
+        assert result["note_count"] == 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestHCCReference — V28 reference table for Po's agent
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestHCCReference:
+    """
+    Po's agent uses hcc_reference_v28 to map clinical findings to ICD-10 codes.
+    These tests ensure the reference is correct and complete.
+    """
+
+    def test_hcc_reference_is_dict(self, tamara_fhir_context):
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert isinstance(result["hcc_reference_v28"], dict)
+
+    def test_hcc_reference_includes_e11_40(self, tamara_fhir_context):
+        """E11.40 (the neuropathy upgrade code) must be in the reference."""
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert "E11.40" in result["hcc_reference_v28"]
+
+    def test_hcc_reference_excludes_non_hcc_codes(self, tamara_fhir_context):
+        """I10 (hypertension, HCC 0) should not appear in the reference."""
+        result = audit_hcc_gaps(tamara_fhir_context)
+        assert "I10" not in result["hcc_reference_v28"]
+
+    def test_hcc_reference_entry_has_correct_shape(self, tamara_fhir_context):
+        """Each reference entry must have hcc, label, raf."""
+        result = audit_hcc_gaps(tamara_fhir_context)
+        entry = result["hcc_reference_v28"]["E11.40"]
+        assert "hcc"   in entry
+        assert "label" in entry
+        assert "raf"   in entry
+        assert entry["hcc"] == 18
+        assert abs(entry["raf"] - 0.302) < 0.001
+
+    def test_hcc_reference_all_entries_have_positive_hcc(self, tamara_fhir_context):
+        """All entries in the reference must have hcc > 0."""
+        result = audit_hcc_gaps(tamara_fhir_context)
+        for code, entry in result["hcc_reference_v28"].items():
+            assert entry["hcc"] > 0, f"{code} has hcc=0 but is in the reference"

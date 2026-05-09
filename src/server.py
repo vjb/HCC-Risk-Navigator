@@ -1,11 +1,17 @@
 """
 src/server.py — HCC Risk Navigator FastAPI + MCP Server
 ========================================================
-Exposes one MCP tool via HTTP/SSE transport:
+Exposes two MCP tools via HTTP/SSE transport:
 
-  audit_hcc_opportunities(patient_id: str)
-    → Pulls FHIR context from Mock EHR, runs HCC gap detection,
-      returns a structured coding audit report.
+  audit_hcc_opportunities(patient_id)
+    → Fetches real FHIR R4 data (Patient, Condition, DocumentReference),
+      computes the current RAF score from coded conditions, and returns
+      the full clinical context for Po's agent to perform CDI gap analysis.
+      No OpenAI key required — all LLM intelligence runs on the Po platform.
+
+  audit_v28_cohort(max_patients)
+    → Sweeps N patients from the FHIR server and computes RAF baselines
+      for each. Po's agent performs cohort-level CDI analysis.
 
 Endpoints:
   GET  /health                          → Liveness check
@@ -424,20 +430,34 @@ try:
     @mcp_server.tool()
     async def audit_hcc_opportunities(patient_id: str) -> dict:
         """
-        Analyze a patient's FHIR chart for uncoded Hierarchical Condition Categories (HCCs).
+        Fetch a patient's FHIR chart and compute their HCC V28 RAF baseline.
 
-        Queries the FHIR server (via SHARP context) for the patient's structured problem
-        list and unstructured clinical notes, then uses GPT-4o-mini to identify conditions
-        that are documented but missing from the coded diagnosis list (V28 specificity gaps).
+        This tool performs two actions:
+          1. Fetches real FHIR R4 resources from the server identified in the
+             SHARP context (X-FHIR-Server-URL header): Patient demographics,
+             active Conditions (ICD-10 coded diagnoses), and DocumentReferences
+             (clinical notes). Falls back to the demo EHR if FHIR is unavailable.
+          2. Computes the deterministic current RAF score from the coded problem list
+             using the CMS HCC Model V28 weight table.
 
-        Returns a full audit report including the 5Ts deliverables:
-          - Table:    RAF Gap Scorecard with estimated revenue impact
-          - Template: Pre-filled physician query letter
-          - Task:     RCM workflow ticket
-          - Talk:     Plain-English audit consultation summary
+        AS THE CALLING AGENT, you must then:
+          - Read 'clinical_notes_text' — this is the full unstructured clinical
+            documentation for the patient.
+          - Read 'hcc_reference_v28' — this is the complete ICD-10 → HCC V28
+            mapping table with RAF weights.
+          - Identify any conditions described in the notes that are NOT already
+            in 'existing_codes' but DO appear in 'hcc_reference_v28'.
+          - For each gap found: provide evidence_quote from the note, the
+            suspected_icd10 code, hcc code, raf_delta, and confidence level.
+          - Calculate projected_raf by adding raf_delta values to current_raf.
+          - Generate the 5Ts deliverables:
+              Table:    RAF Gap Scorecard with dollar impact ($10k per RAF point)
+              Template: Physician query letter citing note evidence
+              Task:     RCM workflow ticket with priority and due date
+              Talk:     Plain-English CDI summary for the clinical team
 
         Args:
-            patient_id: FHIR patient ID (from SHARP context propagation via Prompt Opinion)
+            patient_id: FHIR patient ID (from SHARP context via Prompt Opinion)
         """
         logger.info(f"🩺 MCP tool: audit_hcc_opportunities({patient_id!r})")
 
@@ -492,17 +512,23 @@ try:
     @mcp_server.tool()
     async def audit_v28_cohort(max_patients: int = 5) -> dict:
         """
-        Sweep a patient cohort on the FHIR server and audit each for V28 HCC coding gaps.
+        Fetch FHIR chart data for a patient cohort and compute HCC V28 RAF baselines.
 
-        Uses SHARP context (X-FHIR-Server-URL / X-FHIR-Access-Token) from Prompt Opinion
-        to query the FHIR server for up to max_patients patients. For each patient, fetches
-        their Conditions and DocumentReferences and runs the HCC gap analysis engine.
+        This tool sweeps up to max_patients from the FHIR server (identified via
+        SHARP context) and runs the same FHIR data fetch + deterministic RAF
+        computation as audit_hcc_opportunities() for each patient.
 
-        Returns a cohort-level RAF Gap Scorecard (the Table deliverable) sorted by
-        estimated annual revenue recovery — highest impact patients first.
+        AS THE CALLING AGENT, after receiving this result:
+          - For each patient in 'patient_audits', analyze their 'clinical_notes_text'
+            against 'hcc_reference_v28' to identify HCC coding gaps.
+          - Build a cohort-level RAF Gap Scorecard sorted by estimated revenue
+            recovery (highest impact patients first).
+          - Calculate total_raf_delta and total_estimated_revenue_recovery
+            across the cohort.
+          - Present the Table as the primary executive deliverable.
 
         Args:
-            max_patients: Number of patients to audit (default 5, max 10 for rate limiting)
+            max_patients: Number of patients to audit (default 5, max 10)
         """
         max_patients = min(max_patients, 10)  # cap to avoid FHIR rate limits
         sharp = _fhir_ctx.get()

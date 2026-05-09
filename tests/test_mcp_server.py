@@ -133,57 +133,68 @@ class TestHealthAndBasic:
 # REST Wrapper Tests — audit_hcc_opportunities tool via POST /tools/*
 # ─────────────────────────────────────────────────────────────────────────────
 
-MOCK_AUDIT_RESULT = json.dumps({
-    "gaps": [{
-        "suspected_icd10": "E11.40",
-        "suspected_hcc": 18,
-        "description": "Type 2 diabetes mellitus with diabetic neuropathy",
-        "evidence_quote": "burning sensation in both feet",
-        "clinical_rationale": "Bilateral neuropathy symptoms with Gabapentin supports E11.40.",
-        "raf_delta": 0.302,
-        "confidence": "HIGH",
-    }],
-    "audit_summary": "Coding gap: E11.40 missing from problem list.",
-})
-
 class TestHCCAuditTool:
     async def test_audit_tool_returns_200(self, client):
-        with patch("src.hcc_engine._call_llm", return_value=MOCK_AUDIT_RESULT):
-            r = await client.post(
-                "/tools/audit_hcc_opportunities",
-                json={"patient_id": "tamara-williams-001"},
-            )
+        r = await client.post(
+            "/tools/audit_hcc_opportunities",
+            json={"patient_id": "tamara-williams-001"},
+        )
         assert r.status_code == 200
 
-    async def test_audit_identifies_e11_40_gap(self, client):
-        with patch("src.hcc_engine._call_llm", return_value=MOCK_AUDIT_RESULT):
-            r = await client.post(
-                "/tools/audit_hcc_opportunities",
-                json={"patient_id": "tamara-williams-001"},
-            )
-        data = r.json()
-        gap_codes = [g["suspected_icd10"] for g in data.get("gaps", [])]
-        assert "E11.40" in gap_codes
-
     async def test_audit_returns_current_raf(self, client):
-        with patch("src.hcc_engine._call_llm", return_value=MOCK_AUDIT_RESULT):
-            r = await client.post(
-                "/tools/audit_hcc_opportunities",
-                json={"patient_id": "tamara-williams-001"},
-            )
+        """Current RAF is deterministic from coded conditions — no LLM needed."""
+        r = await client.post(
+            "/tools/audit_hcc_opportunities",
+            json={"patient_id": "tamara-williams-001"},
+        )
         data = r.json()
         assert "current_raf" in data
         assert abs(data["current_raf"] - 0.104) < 0.001
 
     async def test_audit_returns_projected_raf(self, client):
-        with patch("src.hcc_engine._call_llm", return_value=MOCK_AUDIT_RESULT):
-            r = await client.post(
-                "/tools/audit_hcc_opportunities",
-                json={"patient_id": "tamara-williams-001"},
-            )
+        """Projected RAF equals current RAF before Po's agent analysis."""
+        r = await client.post(
+            "/tools/audit_hcc_opportunities",
+            json={"patient_id": "tamara-williams-001"},
+        )
         data = r.json()
         assert "projected_raf" in data
-        assert data["projected_raf"] > data["current_raf"]
+        assert data["projected_raf"] == data["current_raf"]
+
+    async def test_audit_returns_clinical_notes_for_agent(self, client):
+        """clinical_notes_text must be present and contain neuropathy evidence for Po's agent."""
+        r = await client.post(
+            "/tools/audit_hcc_opportunities",
+            json={"patient_id": "tamara-williams-001"},
+        )
+        data = r.json()
+        assert "clinical_notes_text" in data
+        notes = data["clinical_notes_text"].lower()
+        assert any(kw in notes for kw in ["burning", "neuropathy", "gabapentin", "numbness"]), (
+            "Key CDI evidence missing from clinical_notes_text"
+        )
+
+    async def test_audit_returns_hcc_reference_for_agent(self, client):
+        """hcc_reference_v28 must be returned so Po's agent can map findings to codes."""
+        r = await client.post(
+            "/tools/audit_hcc_opportunities",
+            json={"patient_id": "tamara-williams-001"},
+        )
+        data = r.json()
+        assert "hcc_reference_v28" in data
+        assert "E11.40" in data["hcc_reference_v28"], (
+            "E11.40 (neuropathy upgrade) must be in the HCC reference"
+        )
+
+    async def test_audit_gaps_empty_before_agent_analysis(self, client):
+        """Gaps are always empty from the engine — Po's agent identifies them."""
+        r = await client.post(
+            "/tools/audit_hcc_opportunities",
+            json={"patient_id": "tamara-williams-001"},
+        )
+        data = r.json()
+        assert data["gaps"] == []
+        assert data["gap_count"] == 0
 
 
 class TestErrorHandling:
