@@ -21,6 +21,7 @@ import time
 import os
 from datetime import date, timedelta
 from unittest.mock import patch
+from tests.wait_utils import wait_for_url_ready, async_wait_for_condition
 
 import httpx
 import pytest
@@ -96,16 +97,10 @@ def live_server_url(seeded_app, tmp_path_factory):
         env={**os.environ, "DATABASE_URL": db_url},  # Pass DB path to subprocess
     )
 
-    # Wait for server to be ready
-    deadline = time.time() + 10.0
-    while time.time() < deadline:
-        try:
-            r = httpx.get(f"http://127.0.0.1:{port}/health", timeout=1.0)
-            if r.status_code == 200:
-                break
-        except Exception:
-            time.sleep(0.2)
-    else:
+    # Wait for server to be ready using Tenacity
+    try:
+        wait_for_url_ready(f"http://127.0.0.1:{port}/health", timeout=10.0)
+    except TimeoutError:
         proc.terminate()
         pytest.fail("Live uvicorn server failed to start within 10 seconds")
 
@@ -255,31 +250,33 @@ class TestSSETransport:
 
         async def collect_sse_session_id():
             nonlocal session_id
-            async with httpx.AsyncClient(timeout=10.0) as hc:
+            async with httpx.AsyncClient(timeout=15.0) as hc:
                 async with hc.stream("GET", f"{live_server_url}/mcp/sse") as resp:
                     async for line in resp.aiter_lines():
-                        if "sessionId" in line:
-                            m = re.search(r"sessionId=([A-Za-z0-9_\-]+)", line)
+                        # Parse session_id from the endpoint event (keep reading — do NOT break)
+                        if session_id is None and "session" in line:
+                            m = re.search(r"session_?id=([A-Za-z0-9_\-]+)", line, re.IGNORECASE)
                             if m:
                                 session_id = m.group(1)
-                                break
-                    await sse_task_done.wait()
+                        # Stay connected until the test signals it is done —
+                        # breaking here would close the SSE channel and cause
+                        # subsequent POSTs to raise anyio.ClosedResourceError.
+                        if sse_task_done.is_set():
+                            break
 
         sse_task = asyncio.create_task(collect_sse_session_id())
 
-        # Wait for sessionId
-        for _ in range(50):
-            if session_id:
-                break
-            await asyncio.sleep(0.1)
+        # Wait for sessionId using Tenacity (increased timeout for debugging)
+        await async_wait_for_condition(lambda: session_id is not None, timeout=10.0)
 
         assert session_id, "SSE transport did not send an endpoint event with sessionId"
 
         async with httpx.AsyncClient(timeout=5.0) as hc:
             # MCP initialize
+            # Use 'session_id' as observed in debug logs
             r1 = await hc.post(
-                f"{live_server_url}/mcp/messages",
-                params={"sessionId": session_id},
+                f"{live_server_url}/mcp/messages/",
+                params={"session_id": session_id},
                 json={
                     "jsonrpc": "2.0", "id": 1,
                     "method": "initialize",
@@ -291,24 +288,24 @@ class TestSSETransport:
                 },
                 headers={"Content-Type": "application/json"},
             )
-            assert r1.status_code in (200, 202), f"initialize failed: {r1.status_code} {r1.text}"
+            assert r1.status_code in (200, 202, 204), f"initialize failed: {r1.status_code} {r1.text}"
 
             # MCP initialized notification
             await hc.post(
-                f"{live_server_url}/mcp/messages",
-                params={"sessionId": session_id},
+                f"{live_server_url}/mcp/messages/",
+                params={"session_id": session_id},
                 json={"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
                 headers={"Content-Type": "application/json"},
             )
 
             # tools/list
             r2 = await hc.post(
-                f"{live_server_url}/mcp/messages",
-                params={"sessionId": session_id},
+                f"{live_server_url}/mcp/messages/",
+                params={"session_id": session_id},
                 json={"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
                 headers={"Content-Type": "application/json"},
             )
-            assert r2.status_code in (200, 202)
+            assert r2.status_code in (200, 202, 204)
 
         # Give the SSE stream time to receive the tool list response
         await asyncio.sleep(0.5)

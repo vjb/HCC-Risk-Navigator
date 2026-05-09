@@ -29,33 +29,45 @@ def tamara_fhir_context() -> dict:
     """Simulates the output of get_fhir_context('tamara-williams-001')."""
     return {
         "patient": {
-            "fhir_id": "tamara-williams-001",
-            "name": "Tamara Williams",
-            "dob": "1956-03-12",
+            "resourceType": "Patient",
+            "id": "tamara-williams-001",
+            "name": [{"use": "official", "text": "Tamara Williams"}],
+            "birthDate": "1956-03-12",
             "gender": "female",
-            "insurance_plan": "Medicare Advantage",
+            "extension": [
+                {"url": "http://promptopinion.com/fhir/insurance-plan", "valueString": "Medicare Advantage"}
+            ]
         },
         "conditions": [
             {
-                "icd10_code": "E11.9",
-                "description": "Type 2 diabetes mellitus without complications",
-                "hcc_code": 19,
-                "raf_weight": 0.104,
-                "clinical_status": "active",
+                "resourceType": "Condition",
+                "id": "condition-1",
+                "clinicalStatus": {"coding": [{"code": "active"}]},
+                "code": {
+                    "coding": [{"system": "http://hl7.org/fhir/sid/icd-10-cm", "code": "E11.9", "display": "Type 2 diabetes mellitus without complications"}],
+                    "text": "Type 2 diabetes mellitus without complications"
+                },
+                "extension": [
+                    {"url": "http://promptopinion.com/fhir/hcc-code", "valueInteger": 19},
+                    {"url": "http://promptopinion.com/fhir/raf-weight", "valueDecimal": 0.104}
+                ]
             }
         ],
         "clinical_notes": [
             {
-                "note_type": "Office Visit Note",
-                "authored_date": (date.today() - timedelta(days=14)).isoformat(),
-                "content": (
+                "resourceType": "DocumentReference",
+                "id": "note-1",
+                "type": {"text": "Office Visit Note"},
+                "date": (date.today() - timedelta(days=14)).isoformat(),
+                "author": [{"display": "Dr. Nakamura"}],
+                "content": [{"attachment": {"contentType": "text/plain", "data": (
                     "Patient is a 68-year-old female with known Type 2 diabetes presenting "
                     "for routine follow-up. Patient complains of worsening numbness and a "
                     "burning sensation in both feet over the last 3 months. Bilateral lower "
                     "extremity involved. Symptoms consistent with peripheral neuropathy. "
                     "Gabapentin 300mg TID prescribed for symptom management. "
                     "Patient to follow up in 6 weeks."
-                ),
+                )}}]
             }
         ],
     }

@@ -607,28 +607,39 @@ with col_right:
             from src.hcc_engine import audit_hcc_gaps
             fhir_context = {
                 "patient": {
-                    "fhir_id": patient.fhir_id,
-                    "name": patient.name,
-                    "dob": patient.dob,
+                    "resourceType": "Patient",
+                    "id": patient.fhir_id,
+                    "name": [{"use": "official", "text": patient.name}],
+                    "birthDate": patient.dob,
                     "gender": patient.gender,
-                    "insurance_plan": patient.insurance_plan,
+                    "extension": [
+                        {"url": "http://promptopinion.com/fhir/insurance-plan", "valueString": patient.insurance_plan}
+                    ]
                 },
                 "conditions": [
                     {
-                        "icd10_code": c.icd10_code,
-                        "description": c.description,
-                        "hcc_code": c.hcc_code,
-                        "raf_weight": c.raf_weight,
-                        "clinical_status": c.clinical_status,
+                        "resourceType": "Condition",
+                        "id": f"condition-{c.id}",
+                        "clinicalStatus": {"coding": [{"code": c.clinical_status}]},
+                        "code": {
+                            "coding": [{"system": "http://hl7.org/fhir/sid/icd-10-cm", "code": c.icd10_code, "display": c.description}],
+                            "text": c.description
+                        },
+                        "extension": [
+                            {"url": "http://promptopinion.com/fhir/hcc-code", "valueInteger": c.hcc_code},
+                            {"url": "http://promptopinion.com/fhir/raf-weight", "valueDecimal": float(c.raf_weight) if c.raf_weight else 0.0}
+                        ]
                     }
                     for c in conditions
                 ],
                 "clinical_notes": [
                     {
-                        "note_type": n.note_type,
-                        "authored_date": n.authored_date,
-                        "author": n.author,
-                        "content": n.content,
+                        "resourceType": "DocumentReference",
+                        "id": f"note-{n.id}",
+                        "type": {"text": n.note_type},
+                        "date": n.authored_date,
+                        "author": [{"display": n.author}],
+                        "content": [{"attachment": {"contentType": "text/plain", "data": n.content}}]
                     }
                     for n in notes
                 ],

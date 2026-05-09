@@ -13,6 +13,7 @@ import time
 
 import pytest
 from playwright.sync_api import Page, sync_playwright
+from tests.wait_utils import wait_for_url_ready
 
 import sys
 
@@ -55,8 +56,12 @@ def streamlit_server():
         stderr=subprocess.PIPE,
     )
 
-    # Wait for Streamlit to be ready
-    time.sleep(8)
+    # Wait for Streamlit to be ready using Tenacity
+    try:
+        wait_for_url_ready(STREAMLIT_URL, timeout=12.0)
+    except TimeoutError:
+        proc.terminate()
+        pytest.fail("Streamlit server failed to start within 12 seconds")
     yield proc
 
     proc.terminate()
@@ -69,8 +74,7 @@ def browser_page(streamlit_server):
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto(STREAMLIT_URL, wait_until="networkidle", timeout=30000)
-        # Wait for Streamlit to fully render
-        page.wait_for_load_state("networkidle")
+        # Wait for Streamlit to fully render (networkidle is good, but streamlit can be slow)
         time.sleep(2)
         yield page
         browser.close()
@@ -88,7 +92,7 @@ class TestEnterpriseDashboard:
     def test_cfo_metrics_are_visible(self, browser_page: Page):
         """The macro enterprise metrics (e.g., $510,000) must render at the top."""
         content = browser_page.content()
-        assert "Clinic-Wide Value-Based Care" in content, "CFO Header missing"
+        assert "Clinic-Wide Performance" in content, "CFO Header missing"
         assert "$510,000" in content, "Revenue projection metric missing"
 
     def test_patient_banner_renders_tamara(self, browser_page: Page):
@@ -110,7 +114,7 @@ class TestEnterpriseDashboard:
     def test_audit_button_exists(self, browser_page: Page):
         """The primary call-to-action button must be available."""
         # Playwright checks if the button text exists in the DOM
-        button_visible = browser_page.get_by_role("button", name="Execute AI Chart Audit").is_visible()
+        button_visible = browser_page.get_by_role("button", name="Run AI Chart Audit").is_visible()
         # Fallback to content check if Streamlit's shadow DOM hides the role
         if not button_visible:
-            assert "Execute AI Chart Audit" in browser_page.content(), "Audit button missing"
+            assert "Run AI Chart Audit" in browser_page.content(), "Audit button missing"

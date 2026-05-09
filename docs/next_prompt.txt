@@ -1,0 +1,146 @@
+
+.env
+ ive uptdated the env fuile to invlude promptiopnon stuff. yourt web broswesre tool should be able to get this all working now. 
+
+
+
+promptopinion.md
+ you need to study this file and understand the real differentriators of the promption platform.
+
+
+This is the complete package to take Project FIRE (FHIR-Integrated Revenue Engine) from a hackathon concept to a production-grade MVP for medical billing companies.
+
+This documentation is structured to be ingested by your Antigravity agentic programming environment to execute the build with zero ambiguity.
+
+1. Project Overview: The FIRE Engine
+Problem: The 2026 transition to CMS-HCC V28 has created a "revenue cliff." V24 codes are being deleted, and "unspecified" documentation now results in $0 reimbursement.
+Solution: An autonomous multi-agent swarm that audits entire patient cohorts. It identifies V28 gaps, validates them against strict compliance gates, and generates the 5Ts (Talk, Template, Table, Transaction, Task) to recover lost revenue.
+The "Moat": Unlike simple chatbots, FIRE uses Pure MCP to bridge EHR credentials (SHARP context) and A2A protocols to maintain a zero-trust compliance firewall.
+
+2. Master Agent Prompt (For Antigravity)
+Copy and paste this into your agentic programming environment to initiate the build:
+
+"Act as a Senior HealthTech Architect. Build 'Project FIRE,' a multi-agent revenue integrity system.
+Primary Directives:
+
+Implement a Pure MCP Server using FastAPI that declares SHARP extension capabilities for patient/*.rs and system/Patient.rs (Cohort access).
+
+Configure a Multi-Agent Swarm:
+
+Agent 1 (Navigator): Extracts V28 revenue gaps from FHIR DocumentReference notes.
+
+Agent 2 (Compliance): Validates evidence using a zero-trust A2A handoff.
+
+Enforce the 5Ts Framework: Output must include a Table (RAF Gap Scorecard), a Template (Physician Query), and a Task (RCM Workflow).
+
+Ensure all logic is V28 Compliant: Prioritize specificity over unspecified codes.
+
+Execution Style: Use Test-Driven Development (TDD). Validate the MCP handshake before building agent logic."
+
+3. File Manifest
+server.py (The MCP Superpower)
+This is the core "plumbing" that handles FHIR data retrieval without incurring LLM costs on your end.
+
+Python
+import httpx
+from fastapi import FastAPI, Header, HTTPException
+from typing import Optional, List
+
+app = FastAPI()
+
+@app.post("/initialize")
+async def initialize_mcp():
+    """Declares 2026 V28 & Cohort capabilities."""
+    return {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+            "capabilities": {
+                "extensions": {
+                    "ai.promptopinion/fhir-context": {
+                        "scopes": [
+                            {"name": "patient/*.rs", "required": True},
+                            {"name": "system/Patient.rs", "required": True}
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+@app.post("/mcp/tools/audit_v28_cohort")
+async def audit_v28_cohort(
+    x_fhir_server_url: Optional[str] = Header(None, alias="X-FHIR-Server-URL"),
+    x_fhir_access_token: Optional[str] = Header(None, alias="X-FHIR-Access-Token")
+):
+    """Fetches high-risk cohorts for V28 specificity auditing."""
+    if not x_fhir_server_url:
+        raise HTTPException(status_code=400, detail="Missing SHARP context.")
+
+    headers = {"Accept": "application/fhir+json"}
+    if x_fhir_access_token:
+        headers["Authorization"] = f"Bearer {x_fhir_access_token}"
+
+    try:
+        async with httpx.AsyncClient() as client:
+            # Fetch first 10 patients in the system
+            cohort_resp = await client.get(f"{x_fhir_server_url}/Patient?_count=10", headers=headers)
+            patients = cohort_resp.json().get("entry", [])
+            
+            payload = []
+            for entry in patients:
+                p_id = entry["resource"]["id"]
+                # Fetch notes for each patient
+                docs = await client.get(f"{x_fhir_server_url}/DocumentReference?subject=Patient/{p_id}", headers=headers)
+                conds = await client.get(f"{x_fhir_server_url}/Condition?subject=Patient/{p_id}", headers=headers)
+                
+                payload.append({
+                    "patient_id": p_id,
+                    "notes_raw": docs.json(),
+                    "current_conditions": conds.json()
+                })
+            return {"status": "success", "data": payload}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"FHIR Error: {str(e)}")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000)
+requirements.txt
+Plaintext
+fastapi
+uvicorn
+httpx
+4. Test-Driven Development (TDD) Tasks (tasks.md)
+Use this file to track progress and verify the MVP's integrity.
+
+Markdown
+# FIRE Implementation & Verification Tasks
+
+## Phase 1: Infrastructure (MCP)
+- [ ] **Task 1.1:** Deploy `server.py` to Render.
+  - *Success:* URL returns 405 on GET, but accepts POST to `/initialize`.
+- [ ] **Task 1.2:** Connect to Prompt Opinion Workspace.
+  - *Success:* Platform accepts the URL and displays requested SHARP scopes.
+
+## Phase 2: Agent Logic (The Swarm)
+- [ ] **Task 2.1:** Configure Agent 1 (Navigator) with V28 reasoning.
+  - *Test:* Input a clinical note with "Diabetes" (V24). Navigator must suggest "Diabetes with Nephropathy" (V28) if creatinine is high.
+- [ ] **Task 2.2:** Establish A2A Handoff.
+  - *Test:* Agent 1 sends JSON to Agent 2. Agent 2 must validate without re-calling FHIR.
+
+## Phase 3: Deliverables (The 5Ts)
+- [ ] **Task 3.1:** Generate the **Table** (ROI Scorecard).
+  - *Test:* Swarm outputs a Markdown table showing $RAF = Demographic\_Score + \sum HCC\_Weights$.
+- [ ] **Task 3.2:** Generate the **Template** and **Task**.
+  - *Test:* Output includes a pre-filled Physician Query and a follow-up ticket for RCM.
+5. Final Strategic Recommendations (The Winner's Edge)
+The Monetization Model: When pitching to billing companies, don't sell "Software." Sell Success Fees. Offer the platform for a low base fee + 10% of the net-new revenue recovered. This makes the ROI undeniable.
+
+The V28 Specificity Hook: In 2026, many "unspecified" codes have been mapped to zero value. Make sure your Agent 1 specifically looks for "Deleted V24 codes" to flag them for immediate documentation upgrades.
+
+Specialty Skills: In the Prompt Opinion UI, create separate Skills for Cardiology and Endocrinology. This allows the Billing Company to route different clinics through the same swarm with specialized logic.
+
+Demo Secret: For the 3-minute video, show the Table deliverable first. Nothing catches a judge's or a CFO's eye faster than a list of patients with "Missing Revenue" dollar amounts attached to them.
+
+Go build the endgame.
