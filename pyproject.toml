@@ -38,6 +38,12 @@ include = ["src*"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "live_fhir: marks tests that require network access to hapi.fhir.org (run with -m live_fhir)",
+]
+# By default, exclude live_fhir tests so 'pytest tests/' stays fast and offline.
+# To run FHIR integration tests: pytest tests/test_fhir_integration.py -m live_fhir -v
+addopts = "--ignore=tests/test_fhir_integration.py"
 
 [tool.setuptools.package-dir]
 "" = "."
