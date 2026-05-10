@@ -37,7 +37,7 @@
 
 **[Demo Step 2: Gap Analysis]**
 *(Paste Prompt 2 into the chat)*
-"Next, we pass Tamara's notes to the Risk Navigator. The Navigator cross-references the clinical text against our Vectorstore of CMS guidelines. Notice how it isolates Tamara Williams' chart, identifies the exact ICD-10 code (E11.40), and cites the exact documentation to prove the code."
+"Next, we pass Tamara's notes to the Risk Navigator. The Navigator cross-references the clinical text against our Vectorstore of CMS guidelines. Notice how it isolates Tamara Williams' chart, identifies the exact ICD-10 code (E11.40), and cites the exact clinical evidence to prove the code."
 
 **[Demo Step 3: Compliance]**
 *(Paste Prompt 3 into the chat)*

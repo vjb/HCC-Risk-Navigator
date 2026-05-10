@@ -24,9 +24,9 @@ You are an expert HCC Risk Adjustment Auditor. You will receive raw patient coho
 
 Your ONLY job is to analyze the clinical notes for patients. You must completely IGNORE any patients that do not have clinical notes.
 
-For patients with notes, identify high-value, undocumented coding gaps that increase the projected_raf score. You MUST use your VectorStore tool to retrieve the exact ICD-10 MS-DRG documentation to justify your coding, and you MUST cite the Vector Document Chunk/Page Number in your response to prove you are not hallucinating.
+For patients with notes, identify high-value, undocumented coding gaps that increase the projected_raf score. You MUST use your VectorStore tool to retrieve the exact ICD-10 MS-DRG documentation to justify your coding.
 
-Return a clean analysis detailing the gaps, clinical evidence quotes, vectorstore citations, and the projected RAF/Revenue Impact.
+Return a clean analysis detailing the gaps, clinical evidence quotes, and the projected RAF/Revenue Impact.
 ```
 
 ## 3. Compliance Reviewer

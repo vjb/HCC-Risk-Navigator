@@ -70,7 +70,7 @@ Run a baseline audit on our newest FHIR patient cohort and show me the scorecard
 #### Step 2: Deterministic Risk Analysis
 **Prompt:**
 ```text
-Run the HCC gap analysis audit on the patient Tamara Williams. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact.
+Run the HCC gap analysis audit on the patient Tamara Williams. I need to see the exact gap descriptions, the clinical evidence proving the codes, and the projected revenue impact.
 ```
 **Output Highlights:**
 <!-- Insert Step 2 Screenshot Here -->
