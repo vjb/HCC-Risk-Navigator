@@ -92,11 +92,11 @@ Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate
 #### Step 4: System Integration & Workflow Hand-Off
 **Prompt:**
 ```text
-To finalize this workflow, output the raw JSON payload for the generated RCM 'Task' deliverable for Tamara Williams so we can POST it to an enterprise workflow engine (like Jira or ServiceNow).
+To finalize this workflow, output the raw JSON payload for the generated RCM 'Task' deliverable for Tamara Williams so we can POST it to an enterprise workflow engine (like Epic Workqueues or ServiceNow). Please structure the JSON with realistic enterprise fields such as "ticket_priority", "assignee_group", "patient_mrn", "clinical_evidence_snippet", "proposed_icd10", "projected_raf_delta", and a strict "due_date" 48 hours from now.
 ```
 **Output Highlights:**
 <!-- Insert Step 4 Screenshot Here -->
-*(Generates the raw JSON payload for immediate task routing).*
+*(Generates a highly structured, enterprise-grade JSON payload for immediate RCM task routing).*
 
 ## Core Implementation Files
 Here are the critical backend components of the codebase that power these live marketplace assets:
