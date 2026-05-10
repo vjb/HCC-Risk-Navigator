@@ -1,5 +1,7 @@
 # FIRE: FHIR-Integrated Revenue Engine
-*(Prompt Opinion "Agents Assemble" Hackathon Submission)*
+*(Agents Assemble Hackathon Submission)*
+
+[![Watch the Demo on YouTube](https://img.shields.io/badge/YouTube-Watch%20Demo-red?style=for-the-badge&logo=youtube)](https://youtube.com/watch?v=PLACEHOLDER)
 
 ## Executive Summary
 FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with FHIR R4 servers to automatically audit patient records for CMS V28 HCC coding gaps. By combining a structural MCP tool for data retrieval with three specialized AI agents, FIRE identifies undocumented clinical conditions, gets them verified against CMS MEAT standards, and calculates exact revenue recovery metrics.
@@ -20,7 +22,13 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
 
 ## Core Implementation Files
 
-To highlight the deterministic nature of the Prompt Opinion platform integration, here are the critical components of the codebase:
+To highlight the deterministic nature of the Prompt Opinion platform integration, you can view our live production deployments directly on the platform marketplace:
+
+* [**FIRE MCP Tool**](https://app.promptopinion.ai/marketplace/mcp/019d39ef-c21c-703d-a526-e8bcaf8b4fb8)
+* [**HCC Risk Navigator Agent**](https://app.promptopinion.ai/marketplace/agent/019d39f2-f707-719a-b3f1-396b997b5f47)
+* [**Compliance Reviewer Agent**](https://app.promptopinion.ai/marketplace/agent/019d39f3-f6da-779b-b85a-ec474cfde56a)
+
+Here are the critical backend components of the codebase that power these live marketplace assets:
 
 | File | Core Purpose | Prompt Opinion Integration Proof |
 |------|--------------|--------------------------------|
@@ -64,7 +72,7 @@ sequenceDiagram
 ```
 
 ### The Execution Pipeline (Step-by-Step)
-<!-- Insert E2E Pipeline Video Here -->
+![E2E Pipeline Demo](./assets/fire_e2e_demo.webp)
 *(The deterministic, multi-agent execution pipeline inside Prompt Opinion)*
 
 ### The Agentic Prompts
@@ -121,7 +129,7 @@ To understand the financial scale of this technology, here is a highly conservat
 * Capturing just 10 mid-sized hospitals yields a $1M ARR SaaS business with near-zero marginal cost, as the deterministic multi-agent pipeline operates entirely autonomously.
 
 ## Glossary of Terms
-To help those unfamiliar with healthcare Revenue Cycle Management (RCM) understand the exact value of this pipeline, here are the key terms used:
+The following definitions provide context for the healthcare concepts and metrics used in this pipeline:
 
 * **FIRE**: FHIR-Integrated Revenue Engine. The name of our project and MCP backend server.
 * **FHIR (Fast Healthcare Interoperability Resources)**: The modern, global API standard for exchanging electronic health records (EHR).
