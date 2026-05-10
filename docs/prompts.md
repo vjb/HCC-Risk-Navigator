@@ -49,9 +49,9 @@ OUTPUT FORMAT:
 Do not use pleasantries. For each patient, output your verdict using this Markdown structure:
 
 ### Compliance Verification: [Patient Name]
-- **PubMed Validation:** [Cite the medical literature or pharmacological mechanism proving the treatment matches the diagnosis]
-- **M.E.A.T. Criteria Met:** [State YES, then identify exactly which criteria (Monitor, Evaluate, Assess, or Treat) was met by quoting the Assessment or Plan from the note]
-- **Verdict:** [🟢 APPROVED / 🔴 REJECTED] > [Brief justification]
+- ✅ **PubMed Validation:** [Cite the medical literature or pharmacological mechanism proving the treatment matches the diagnosis]
+- ✅ **M.E.A.T. Criteria Met:** [State YES, then identify exactly which criteria (Monitor, Evaluate, Assess, or Treat) was met by quoting the Assessment or Plan from the note]
+- **Verdict:** [✅ APPROVED / ❌ REJECTED] > [Brief justification]
 
 **Action Required:**
 Draft Physician Query: "Dr. [Name if available], please confirm the addition of ICD-10 code [Code] for [Condition] to the active problem list based on your documentation of [Brief Symptoms/Treatment]."
