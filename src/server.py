@@ -610,21 +610,24 @@ try:
         scorecard_rows = []
         total_current_raf = 0.0
         for r in cohort_results:
-            src_label = "🏥 FHIR" if r.get("_data_source") == "fhir" else "📋 Mock"
             current_raf = r.get("current_raf", 0.0)
             total_current_raf += current_raf
             est_annual = round(current_raf * _REV, 0)
             codes_str  = ", ".join(r.get("existing_codes", [])[:3]) or "—"
             note_count = r.get("note_count", 0)
+            
+            notes_str = f"📄 {note_count} Note(s)" if note_count > 0 else "❌ None"
+            status_str = "🟡 Ready for Audit" if note_count > 0 else "🛑 Needs Notes"
+            
             scorecard_rows.append(
-                f"| {r['patient_name']} | {src_label} | {current_raf:.3f} | ≈${est_annual:,.0f}/yr | {codes_str} | {note_count} note(s) | **⚠ Gap analysis pending** |"
+                f"| {r['patient_name']} | {current_raf:.3f} | ≈${est_annual:,.0f}/yr | {codes_str} | {notes_str} | **{status_str}** |"
             )
 
         table = (
             "## 📊 V28 Cohort — HCC Baseline Audit\n"
             f"**FHIR Server:** `{base}`  |  **Data Source:** {data_source.upper()}  |  **Patients Audited:** {len(cohort_results)}\n\n"
-            "| Patient | Source | Current RAF | Est. Annual Revenue | Coded Conditions | Notes | CDI Status |\n"
-            "|---------|--------|-------------|---------------------|------------------|-------|------------|\n"
+            "| Patient | Current RAF | Est. Revenue | Coded Conditions | Clinical Notes | CDI Status |\n"
+            "|---------|-------------|--------------|------------------|----------------|------------|\n"
         ) + "\n".join(scorecard_rows)
 
         return {
