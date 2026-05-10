@@ -35,8 +35,13 @@ FIRE leverages the "Agents Assemble" framework by orchestrating three distinct p
 
 ![Multi-Agent Hand-off](./assets/agent_topology.png)
 
-## The Demo Execution (Step-by-Step)
-To guarantee flawless, deterministic execution, the demonstration is run through a strict 3-step agentic hand-off. The agents share context via the Prompt Opinion response JSON object, ensuring seamless data flow without manual copying and pasting.
+### Watch The End-to-End Demo
+![E2E Pipeline Demo](./assets/fire_e2e_demo.webp)
+*(Click to view the full deterministic, multi-agent execution pipeline inside Prompt Opinion)*
+
+### The Agentic Prompts
+All the exact agent system prompts (Orchestrator, Risk Navigator, Compliance Reviewer) that run this architecture natively on the Prompt Opinion platform have been documented here:
+[View Agent System Prompts (`docs/prompts.md`)](docs/prompts.md)
 
 ### Step 1: Cohort Triage & Baseline Scorecard
 To prioritize the clinical documentation workflow, the engine first establishes a financial baseline. It calculates the current value of each patient's coded conditions and scans the FHIR records to triage the queue, flagging exactly who has unreviewed unstructured clinical notes hiding potential lost revenue.
