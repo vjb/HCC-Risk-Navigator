@@ -76,3 +76,19 @@ CRITICAL INSTRUCTIONS:
 **Output Highlights:**
 ![Step 4 Final Output](./assets/step4_5ts.png)
 *(Final report yields $9,540 in immediate revenue impact, fully customized Physician Query letters, and zero LLM hallucinations).*
+
+## 💰 Market Analysis & Revenue Projections
+To understand the financial scale of this technology, here is a highly conservative market analysis for deploying FIRE at a typical mid-sized regional hospital:
+
+**Conservative Assumptions:**
+* **Medicare Advantage Panel**: 10,000 patients.
+* **Gap Prevalence**: Only 5% of patients (500) have an undocumented HCC gap buried in their unstructured clinical notes.
+* **Average Gap Value**: A minor +0.200 RAF increase per gap (approx. $2,000/yr per patient).
+
+**Hospital Financial Impact:**
+* 500 patients × $2,000 = **$1,000,000 in recovered annual revenue**.
+* Cost to hospital: $0 upfront. No new clinical documentation integrity (CDI) headcount required.
+
+**FIRE Business Model (10% Shared Savings):**
+* $1,000,000 × 10% = **$100,000 Annual Recurring Revenue (ARR)** for FIRE per hospital.
+* Capturing just 10 mid-sized hospitals yields a $1M ARR SaaS business with near-zero marginal cost, as the deterministic multi-agent pipeline operates entirely autonomously.
