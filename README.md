@@ -4,13 +4,14 @@
 ## Executive Summary
 FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with FHIR R4 servers to automatically audit patient records for CMS V28 HCC coding gaps. By combining a structural MCP tool for data retrieval with three specialized AI agents, FIRE identifies undocumented clinical conditions, gets them verified against CMS MEAT standards, and calculates exact revenue recovery metrics.
 
-**Business Model:** FIRE operates on a shared savings model. We charge minimal upfront SaaS fees, taking exactly 10% of the net new RAF revenue generated from our identified and approved coding gaps. In a representative audit of just 3 patients, the engine can recover $9,540/yr, netting FIRE $954 in recurring value.
+**Business Model:** FIRE operates on a shared savings model. We charge minimal upfront SaaS fees, taking exactly 10% of the net new RAF revenue generated from our identified and approved coding gaps. This perfectly aligns our incentives with the hospital's financial outcomes.
 
 ## The Technology Stack
 * **FastAPI + FastMCP**: Serves the `audit_v28_cohort` MCP tool.
 * **SHARP Protocol Middleware & HTI-1 Interoperability**: Intercepts `X-FHIR-Server-URL` and authentication headers. By using the SHARP extension specs and FHIR standards, FIRE is fully compatible with **Darena Health** and HTI-1 mandates, making it capable of plugging instantly into any compliant EHR connected to the platform.
 * **Live FHIR R4 Integration**: We do not use fake mock data for the demo. FIRE queries a live, public HAPI FHIR server. You can view one of our exact hydrated patients (Tamara Williams) live on the network here:
-  [View Real FHIR Patient Resource](https://hapi.fhir.org/baseR4/Patient/132026010)
+  * [View FHIR Patient Resource](https://hapi.fhir.org/baseR4/Patient/132026010)
+  * [View FHIR Clinical Note (Base64 Encoded DocumentReference)](https://hapi.fhir.org/baseR4/DocumentReference?subject=Patient/132026010)
 
 ![Architecture Diagram](./assets/architecture.png)
 
