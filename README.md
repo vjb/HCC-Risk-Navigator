@@ -7,10 +7,10 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
 **Business Model:** FIRE operates on a shared savings model. We charge minimal upfront SaaS fees, taking exactly 10% of the net new RAF revenue generated from our identified and approved coding gaps. This perfectly aligns our incentives with the hospital's financial outcomes.
 
 ## The Technology Stack
-* **Render Cloud Deployment**: The MCP backend is permanently deployed as a high-availability cloud service on Render (`https://fire-mcp-backend.onrender.com/mcp/sse`). No local `ngrok` tunnels required for the judges to test the pipeline.
+* **Render Cloud Deployment**: The MCP backend is permanently deployed as a high-availability cloud service on Render (`https://fire-mcp-backend.onrender.com/mcp/sse`).
 * **FastAPI + FastMCP**: Serves the `audit_v28_cohort` MCP tool.
 * **SHARP Protocol Middleware & HTI-1 Interoperability**: Intercepts `X-FHIR-Server-URL` and authentication headers. By using the SHARP extension specs and FHIR standards, FIRE is fully compatible with **Darena Health** and HTI-1 mandates, making it capable of plugging instantly into any compliant EHR connected to the platform.
-* **Live FHIR R4 Integration**: We do not use fake mock data for the demo. FIRE queries a live, public HAPI FHIR server. You can view one of our exact hydrated patients (Tamara Williams) live on the network here:
+* **Live FHIR R4 Integration**: FIRE queries a live, public HAPI FHIR server. You can view one of the exact hydrated patients (Tamara Williams) live on the network here:
   * [View FHIR Patient Resource](https://hapi.fhir.org/baseR4/Patient/132026010)
   * [View FHIR Clinical Note (Base64 Encoded DocumentReference)](https://hapi.fhir.org/baseR4/DocumentReference?subject=Patient/132026010)
 
@@ -24,13 +24,13 @@ graph TD
 
 ## Core Implementation Files
 
-To prove the legitimacy of our Prompt Opinion platform integration and demonstrate that the AI intelligence is real (not faked), here are the critical components of the codebase:
+To highlight the deterministic nature of the Prompt Opinion platform integration, here are the critical components of the codebase:
 
 | File | Core Purpose | Prompt Opinion Integration Proof |
 |------|--------------|--------------------------------|
 | [`src/server.py`](src/server.py) | FastMCP Server & Auth | **[Capability Injection (L413-L431)](src/server.py#L413-L431):** We programmatically extend the FastMCP initialization options to register the `ai.promptopinion/fhir-context` capability. This ensures our server natively authenticates and processes Prompt Opinion's SHARP headers and dynamic FHIR context. |
 | [`src/hcc_engine.py`](src/hcc_engine.py) | Deterministic Baseline Calculator | **[Raw Context Handoff (L180-L208)](src/hcc_engine.py#L180-L208):** This engine uses ZERO LLMs. It calculates the baseline mathematically using CMS V28 maps, and explicitly packages the raw `clinical_notes_text` array to hand back to the Prompt Opinion LLM agent, which performs the *real* gap analysis intelligence. |
-| [`scripts/record_demo.py`](scripts/record_demo.py) | Demo Automation | Playwright script that logs into the Prompt Opinion UI to deterministically drive the Orchestrator, Risk Navigator, and Compliance Reviewer hand-offs. |
+| [`scripts/record_demo.py`](scripts/record_demo.py) | E2E Automation | Playwright script that automates the Prompt Opinion UI to deterministically drive the Orchestrator, Risk Navigator, and Compliance Reviewer hand-offs. |
 
 ## The Multi-Agent Topology
 FIRE leverages the "Agents Assemble" framework by orchestrating three distinct personas in a strict data-handoff topology:
@@ -67,8 +67,8 @@ sequenceDiagram
     Orch-->>User: Final Verified 5Ts Deliverable
 ```
 
-### Watch The End-to-End Demo
-<!-- Insert E2E Pipeline Demo Video Here -->
+### The Execution Pipeline (Step-by-Step)
+<!-- Insert E2E Pipeline Video Here -->
 *(The deterministic, multi-agent execution pipeline inside Prompt Opinion)*
 
 ### The Agentic Prompts
@@ -123,7 +123,7 @@ To understand the financial scale of this technology, here is a highly conservat
 * Capturing just 10 mid-sized hospitals yields a $1M ARR SaaS business with near-zero marginal cost, as the deterministic multi-agent pipeline operates entirely autonomously.
 
 ## Glossary of Terms
-To help judges unfamiliar with healthcare Revenue Cycle Management (RCM) understand the exact value of this pipeline, here are the key terms used:
+To help those unfamiliar with healthcare Revenue Cycle Management (RCM) understand the exact value of this pipeline, here are the key terms used:
 
 * **FIRE**: FHIR-Integrated Revenue Engine. The name of our project and MCP backend server.
 * **FHIR (Fast Healthcare Interoperability Resources)**: The modern, global API standard for exchanging electronic health records (EHR).
