@@ -98,7 +98,7 @@ Verify the clinical gaps identified by the HCC Risk Navigator against CMS M.E.A.
 
 CRITICAL: When sending this task to the Compliance Reviewer, you MUST explicitly include the exact clinical note snippets and the identified gaps in your message to them. The Reviewer does not have database access and relies entirely on you passing the notes.
 
-Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate the total projected RAF delta and the final revenue impact at $10,000 per 1.0 RAF. List out the verified physician queries. Address the queries to "Dr. Sarah Jenkins, MD" and ensure you cite the exact FHIR DocumentReference IDs.
+Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate the total projected RAF delta and the final revenue impact at $10,000 per 1.0 RAF. List out the verified physician queries. Address the queries to "Dr. Sarah Jenkins, MD".
 ```
 **Output Highlights:**
 <!-- Insert Step 3 Screenshot Here -->
