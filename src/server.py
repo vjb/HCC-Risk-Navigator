@@ -620,14 +620,14 @@ try:
             status_str = "Ready for Audit" if note_count > 0 else "Needs Notes"
             
             scorecard_rows.append(
-                f"| {r['patient_name']} | {current_raf:.3f} | ≈${est_annual:,.0f}/yr | {codes_str} | {notes_str} | **{status_str}** |"
+                f"| {r['patient_name']} | `{r['patient_id']}` | {current_raf:.3f} | ≈${est_annual:,.0f}/yr | {codes_str} | {notes_str} | **{status_str}** |"
             )
 
         table = (
             "## V28 Cohort — HCC Baseline Audit\n"
             f"**FHIR Server:** `{base}`  |  **Data Source:** {data_source.upper()}  |  **Patients Audited:** {len(cohort_results)}\n\n"
-            "| Patient | Current RAF | Est. Revenue | Coded Conditions | Clinical Notes | CDI Status |\n"
-            "|---------|-------------|--------------|------------------|----------------|------------|\n"
+            "| Patient | Patient ID | Current RAF | Est. Revenue | Coded Conditions | Clinical Notes | CDI Status |\n"
+            "|---------|------------|-------------|--------------|------------------|----------------|------------|\n"
         ) + "\n".join(scorecard_rows)
 
         return {
