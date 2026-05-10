@@ -10,7 +10,7 @@
 *(Screen: Presenting `FIRE_Revenue_Recovery.pdf` Slides 1 to 7)*
 
 **[Slide 1: Title]**
-"Hi everyone, this is FIRE: The FHIR-Integrated Revenue Engine. We built a deterministic, multi-agent pipeline to solve the 'Last Mile' of healthcare AI—recovering lost Medicare revenue."
+"Hi everyone, this is FIRE: The FHIR-Integrated Revenue Engine. We built a deterministic, multi-agent pipeline to solve the 'Last Mile' of healthcare AI: recovering lost Medicare revenue."
 
 **[Slide 2: The Problem]**
 "Under the new CMS V28 risk-adjustment model, generic diagnoses are now worth zero dollars. Hospitals are losing millions simply because specific conditions are buried in unstructured clinical notes."
@@ -19,7 +19,7 @@
 "You can't hire enough humans to read 10,000 patient charts a day. Enter FIRE. We deploy an orchestrated team of specialist AI agents directly onto your FHIR server to autonomously triage patients, identify gaps, and draft verified billing queries."
 
 **[Slide 5: Architecture]**
-"We built both a FastMCP tool and a 3-agent A2A topology. The Orchestrator pulls the raw FHIR data, the Risk Navigator acts as the analyst, and the Compliance Reviewer acts as a Zero-Trust firewall."
+"We built both a FastMCP tool and a 3-agent A2A topology. The Orchestrator pulls the raw FHIR data, the Risk Navigator acts as the analyst, and the Compliance Reviewer acts as a compliance validator."
 
 **[Slide 6: Security]**
 "We solved the trust problem. FIRE uses Prompt Opinion's SHARP protocols to natively handle EHR credentials without rogue API keys. And to prevent LLM hallucinations, every proposed code is strictly grounded in PubMed and CMS M.E.A.T. standards."
@@ -33,7 +33,7 @@
 
 **[Demo Step 1: Baseline]**
 *(Paste Prompt 1 into the chat)*
-"First, the Clinical Orchestrator connects to our live MCP server to triage the patient cohort. It calculates the current RAF baseline mathematically—zero LLMs involved—and flags three patients who have unreviewed clinical notes attached to their FHIR records."
+"First, the Clinical Orchestrator connects to our live MCP server to triage the patient cohort. It calculates the current RAF baseline mathematically (zero LLMs involved) and flags three patients who have unreviewed clinical notes attached to their FHIR records."
 
 **[Demo Step 2: Gap Analysis]**
 *(Paste Prompt 2 into the chat)*
@@ -41,11 +41,11 @@
 
 **[Demo Step 3: Compliance]**
 *(Paste Prompt 3 into the chat)*
-"Now for the Last Mile. We pass these findings to the Compliance Reviewer. It has zero database access. It acts as an internal auditor, verifying that the proposed treatments legitimately match the diagnosis via PubMed, and ensuring strict CMS M.E.A.T. criteria are met. Look at those green checkmarks—zero hallucinations, fully verified."
+"Now for the Last Mile. We pass these findings to the Compliance Reviewer. It has zero database access. It acts as an internal auditor, verifying that the proposed treatments legitimately match the diagnosis via PubMed, and ensuring strict CMS M.E.A.T. criteria are met. Look at those green checkmarks: zero hallucinations, fully verified."
 
 **[Demo Step 4: System Hand-off]**
 *(Paste Prompt 4 into the chat)*
-"Finally, we don't just output a summary. FIRE generates a highly-structured JSON payload—matching the EPIC HCLS model format—so we can instantly POST this task to an enterprise RCM engine."
+"Finally, we don't just output a summary. FIRE generates a highly-structured JSON payload (matching the EPIC HCLS model format) so we can instantly POST this task to an enterprise RCM engine."
 
 ---
 
@@ -56,4 +56,4 @@
 "Because this pipeline is deterministic, it scales infinitely with zero upfront cost. If we deploy this to a single mid-sized hospital with 10,000 patients and find just a 5% gap prevalence, that's $1,000,000 in recovered annual revenue. On our 10% shared savings model, that is $100,000 in ARR for us per hospital."
 
 **[Slide 8: The Vision]**
-"This is the endgame of healthcare AI. We aren't just summarizing text—we are using Prompt Opinion to route authenticated clinical data into actionable financial workflows. Thank you."
+"This is the endgame of healthcare AI. We aren't just summarizing text: we are using Prompt Opinion to route authenticated clinical data into actionable financial workflows. Thank you."
