@@ -20,11 +20,9 @@ During the latest attempt to record the 5-step demo on the Prompt Opinion platfo
 
 ## Root Cause Hypothesis & Deep Dive
 1. **Tool Refetching Failure**: In Step 2, the Risk Navigator is ignoring the Orchestrator's context and attempting to fetch the patient charts individually using its own `audit_hcc_opportunities` MCP tool.
-2. **Missing Local Data**: The public HAPI FHIR server is unreliable. When the `audit_hcc_opportunities` tool fails to find the patients on HAPI, it falls back to the local SQLite DB (`data/mock_ehr.sqlite`).
-3. **Seeding Limitation**: `scripts/seed_db.py` *only* seeds Tamara Williams. It does not seed Richard Chen or Maria Gonzalez. Therefore, the tool returns `{"error": "Patient ... not found in FHIR server or mock EHR."}` for Maria, which the LLM repeats verbatim in the output you saw.
+2. **HAPI FHIR Instability**: The public HAPI FHIR server is unreliable under repeated immediate queries. When the `audit_hcc_opportunities` tool fails to find the patients on HAPI during this redundant secondary fetch, it returns a "Patient not found" error, which the LLM repeats verbatim.
 
 ## Next Steps upon Session Restart
 1.  **Prompt Adjustment (Orchestrator)**: Update `docs/prompts.md` so the Orchestrator is forced to extract `clinical_notes_text` from the `patient_audits` array and pass it verbatim in its message to the Risk Navigator.
 2.  **Prompt Adjustment (Risk Navigator)**: Instruct the Risk Navigator to *rely strictly on the clinical notes provided in the message* rather than calling the `audit_hcc_opportunities` tool to refetch data.
-3.  **Alternative (DB Seeding)**: Alternatively, we could update `scripts/seed_db.py` to correctly seed Richard and Maria into the local Mock EHR so the tool fallback actually works.
-4.  **Resume Recording**: Once these prompts/DB are fixed, run the demo sequence again.
+3.  **Resume Recording**: Once the prompts are fixed to enforce strict data hand-offs without refetching, run the demo sequence again.
