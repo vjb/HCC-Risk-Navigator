@@ -41,7 +41,7 @@ Please run the audit_v28_cohort tool to sweep a block of patients. Display the b
 ### Step 2: Deterministic Risk Analysis
 **Prompt:**
 ```text
-Perfect. You MUST extract the ENTIRE raw JSON array from your audit_v28_cohort tool execution and pass it directly to the 'HCC Risk Navigator' agent in ONE SINGLE message. Do not filter or summarize the data yourself. Instruct the Risk Navigator to analyze the clinical_notes_text against the V28 guidelines using its ICD-10 MS-DRG vectorstore for any patients flagged with unreviewed notes. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact.
+Perfect. You MUST extract the ENTIRE raw JSON array from your audit_v28_cohort tool execution and pass it directly to the 'HCC Risk Navigator' agent in ONE SINGLE message. Do not filter or summarize the data yourself. Instruct the Risk Navigator to analyze the clinical_notes_text against the V28 guidelines using its ICD-10 MS-DRG vectorstore for any patients flagged with unreviewed notes. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact. CRITICAL: DO NOT consult the Compliance Reviewer yet. We will do that in the next step.
 ```
 **Output Highlights:**
 ![Step 2 Gap Findings](./assets/step2_gaps.png)
