@@ -56,9 +56,6 @@ All the exact agent system prompts (Orchestrator, Risk Navigator, Compliance Rev
 ### The Execution Pipeline (Step-by-Step)
 > **Note:** This pipeline can be entirely automated (from reading the notes all the way to scheduling tasks in an enterprise workflow system like Jira, Epic Workqueues, or ServiceNow). For this demonstration, we are running step-by-step in interactive discovery mode to showcase how the FIRE tool works under the hood. In practice, the final 5Ts deliverable would automatically route a ticket into the hospital's RCM engine.
 
-#### Step 0: Environment Configuration
-Duplicate the `.env.example` file into a local `.env` file and populate all variables prior to running any installation or execution commands.
-
 #### Step 1: Cohort Triage & Baseline Scorecard
 To prioritize the clinical documentation workflow, the engine first establishes a financial baseline. It calculates the current value of each patient's coded conditions and scans the FHIR records to triage the queue, flagging exactly who has unreviewed unstructured clinical notes hiding potential lost revenue.
 
