@@ -59,7 +59,7 @@ All the exact agent system prompts (Orchestrator, Risk Navigator, Compliance Rev
 [View Agent System Prompts (`docs/prompts.md`)](docs/prompts.md)
 
 ### The Execution Pipeline (Step-by-Step)
-> **Note:** This pipeline can be entirely automated—from reading the notes all the way to scheduling tasks in Jira. For this demonstration, we are running step-by-step in interactive discovery mode to showcase how the FIRE tool works under the hood. In practice, the final 5Ts deliverable would automatically schedule a ticket in Jira.
+> **Note:** This pipeline can be entirely automated—from reading the notes all the way to scheduling tasks in an enterprise workflow system (e.g., Jira, Epic Workqueues, or ServiceNow). For this demonstration, we are running step-by-step in interactive discovery mode to showcase how the FIRE tool works under the hood. In practice, the final 5Ts deliverable would automatically route a ticket into the hospital's RCM engine.
 
 #### Step 1: Cohort Triage & Baseline Scorecard
 To prioritize the clinical documentation workflow, the engine first establishes a financial baseline. It calculates the current value of each patient's coded conditions and scans the FHIR records to triage the queue, flagging exactly who has unreviewed unstructured clinical notes hiding potential lost revenue.
@@ -97,11 +97,11 @@ Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate
 #### Step 4: System Integration & Workflow Hand-Off
 **Prompt:**
 ```text
-To finalize this workflow, output the raw JSON payload for the generated RCM 'Task' deliverable for Tamara Williams so we can POST it to our Jira workflow engine. Additionally, list the exact SHARP protocol and Prompt Opinion headers that securely grounded this session to the live FHIR server ( X-FHIR-Server-URL, X-FHIR-Access-Token, X-Patient-ID, X-Agent-ID, and X-FHIR-Refresh-Url.)
+To finalize this workflow, output the raw JSON payload for the generated RCM 'Task' deliverable for Tamara Williams so we can POST it to an enterprise workflow engine (like Jira or ServiceNow). Additionally, list the exact SHARP protocol and Prompt Opinion headers that securely grounded this session to the live FHIR server ( X-FHIR-Server-URL, X-FHIR-Access-Token, X-Patient-ID, X-Agent-ID, and X-FHIR-Refresh-Url.)
 ```
 **Output Highlights:**
 <!-- Insert Step 4 Screenshot Here -->
-*(Generates the raw Jira JSON payload for immediate task routing, and surfaces the live SHARP headers validating the authenticated FHIR session).*
+*(Generates the raw JSON payload for immediate task routing, and surfaces the live SHARP headers validating the authenticated FHIR session).*
 
 ## Core Implementation Files
 Here are the critical backend components of the codebase that power these live marketplace assets:
