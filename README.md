@@ -19,7 +19,7 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
 FIRE leverages the "Agents Assemble" framework by orchestrating three distinct personas in a strict data-handoff topology:
 
 1. **Clinical Orchestrator (Manager)**: Runs the MCP tool `audit_v28_cohort` to fetch FHIR data. Crucially, it acts as a pure data pipeline, serializing the raw JSON array and handing it directly to the analyst agent to prevent LLM context fragmentation.
-2. **HCC Risk Navigator (Analyst)**: A sub-agent dedicated exclusively to cross-referencing `clinical_notes_text` against the CMS V28 HCC dictionary. It identifies the gaps and calculates the RAF math (Current vs. Projected).
+2. **HCC Risk Navigator (Analyst)**: A sub-agent dedicated exclusively to cross-referencing `clinical_notes_text` against the CMS V28 HCC dictionary. It identifies the gaps and calculates the RAF math (Current vs. Projected). It has native vectorstore access to the official ICD-10 MS-DRG Version 43.1 guidelines to pull precise diagnostic codes without hallucinating.
 3. **Compliance Reviewer (The Zero-Trust Firewall)**: A final checkpoint agent that acts as a zero-trust gatekeeper. It does not have direct database or FHIR access. Its sole purpose is to prevent fraud by verifying that all proposed codes are backed by strict CMS M.E.A.T. (Monitor, Evaluate, Assess, Treat) criteria found in the clinical notes.
 
 ![Multi-Agent Hand-off](./assets/agent_topology.png)
@@ -41,7 +41,7 @@ Please run the audit_v28_cohort tool to sweep a block of patients. Display the b
 ### Step 2: Risk Analysis
 **Prompt:**
 ```text
-Now, you must consult the 'HCC Risk Navigator' agent. You MUST pass the ENTIRE raw JSON array from the tool output to the Risk Navigator in ONE SINGLE message. Ask the Risk Navigator to analyze the clinical_notes_text against the hcc_reference_v28 to identify high-value coding gaps for any patients flagged as needing review. Instruct it to explicitly query its ICD-10 MS-DRG Version 43.1 vectorstore to pull the precise diagnostic codes. It MUST explicitly cite the exact vector document chunk and page number it used to find the code to prove it is not hallucinating. Return the exact gap descriptions, vectorstore citations, projected_raf, and Revenue Impact calculations.
+Now, you must consult the 'HCC Risk Navigator' agent. You MUST pass the ENTIRE raw JSON array from the tool output to the Risk Navigator in ONE SINGLE message. Ask the Risk Navigator to analyze the clinical_notes_text against the hcc_reference_v28 to identify high-value coding gaps for any patients flagged as needing review. Return the exact gap descriptions, projected_raf, and Revenue Impact calculations.
 ```
 **Output Highlights:**
 ![Step 2 Gap Findings](./assets/step2_gaps.png)
