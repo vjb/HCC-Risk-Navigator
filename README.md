@@ -25,7 +25,7 @@ FIRE leverages the "Agents Assemble" framework by orchestrating three distinct p
 ![Multi-Agent Hand-off](./assets/agent_topology.png)
 
 ## The Demo Execution (Step-by-Step)
-To guarantee flawless, deterministic execution without LLM context overload, the demonstration is run through a strict 4-step conversational hand-off. The judges can easily reproduce this exact output.
+To guarantee flawless, deterministic execution without LLM context overload, the demonstration is run through a strict 3-step manual hand-off using the direct agent chat interface. The judges can easily reproduce this exact output.
 
 ### Step 1: Cohort Triage & Baseline Scorecard
 To prioritize the clinical documentation workflow, the engine first establishes a financial baseline. It calculates the current value of each patient's coded conditions and scans the FHIR records to triage the queue, flagging exactly who has unreviewed unstructured clinical notes hiding potential lost revenue.
