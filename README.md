@@ -21,7 +21,7 @@ To prove the legitimacy of our Prompt Opinion platform integration and demonstra
 
 | File | Core Purpose | Prompt Opinion Integration Proof |
 |------|--------------|--------------------------------|
-| [`src/server.py`](src/server.py) | FastMCP Server & Auth | **[Capability Injection (L413-L431)](src/server.py#L413-L431):** We explicitly monkey-patch the FastMCP initialization options to register the `ai.promptopinion/fhir-context` capability, proving we natively handle PO's SHARP tokens and FHIR server context. |
+| [`src/server.py`](src/server.py) | FastMCP Server & Auth | **[Capability Injection (L413-L431)](src/server.py#L413-L431):** We programmatically extend the FastMCP initialization options to register the `ai.promptopinion/fhir-context` capability. This ensures our server natively authenticates and processes Prompt Opinion's SHARP headers and dynamic FHIR context. |
 | [`src/hcc_engine.py`](src/hcc_engine.py) | Deterministic Baseline Calculator | **[Raw Context Handoff (L180-L208)](src/hcc_engine.py#L180-L208):** This engine uses ZERO LLMs. It calculates the baseline mathematically using CMS V28 maps, and explicitly packages the raw `clinical_notes_text` array to hand back to the Prompt Opinion LLM agent, which performs the *real* gap analysis intelligence. |
 | [`scripts/record_demo.py`](scripts/record_demo.py) | Demo Automation | Playwright script that logs into the Prompt Opinion UI to deterministically drive the Orchestrator, Risk Navigator, and Compliance Reviewer hand-offs. |
 
