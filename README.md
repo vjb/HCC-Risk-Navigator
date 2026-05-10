@@ -32,7 +32,7 @@ To prioritize the clinical documentation workflow, the engine first establishes 
 
 **Prompt:**
 ```text
-Please run the audit_v28_cohort tool to sweep a block of patients. Display the baseline cohort scorecard to me so I can see who needs CDI review.
+Run a baseline audit on our newest FHIR patient cohort and show me the scorecard. I need to see the current RAF value of the group and identify exactly which patients have clinical notes attached that are ready for gap analysis.
 ```
 **Output Highlights:**
 ![Step 1 Scorecard](./assets/step1_scorecard.png)
