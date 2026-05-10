@@ -87,7 +87,7 @@ To prioritize the clinical documentation workflow, the engine first establishes 
 Run a baseline audit on our newest FHIR patient cohort and show me the scorecard. I need to see the current RAF value of the group and identify exactly which patients have clinical notes attached that are ready for gap analysis.
 ```
 **Output Highlights:**
-<!-- Insert Step 1 Screenshot Here -->
+![Step 1 Scorecard](./assets/step1_scorecard.png)
 *(Shows 6 patients fetched from FHIR, highlighting Tamara, Richard, and Maria as having pending gap analysis due to attached clinical notes).*
 
 ### Step 2: Deterministic Risk Analysis
@@ -96,7 +96,7 @@ Run a baseline audit on our newest FHIR patient cohort and show me the scorecard
 Run the HCC gap analysis audits on the patients flagged as 'Ready for Audit'. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact.
 ```
 **Output Highlights:**
-<!-- Insert Step 2 Screenshot Here -->
+![Step 2 Gap Findings](./assets/step2_gaps.png)
 *(Successfully identifies E11.40 for Tamara, J44.1 for Richard, and N18.4 for Maria with exact RAF Deltas).*
 
 ### Step 3: Compliance Verification & The 5Ts Deliverable
@@ -109,7 +109,7 @@ CRITICAL: When sending this task to the Compliance Reviewer, you MUST explicitly
 Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate the total projected RAF delta and the final revenue impact at $10,000 per 1.0 RAF. List out the verified physician queries. Address the queries to "Dr. Sarah Jenkins, MD".
 ```
 **Output Highlights:**
-<!-- Insert Step 3 Screenshot Here -->
+![Step 3 Final Output](./assets/step3_5ts.png)
 *(Final report yields $9,540 in immediate revenue impact, fully customized Physician Query letters, and zero LLM hallucinations).*
 
 ## Market Analysis & Revenue Projections
