@@ -96,6 +96,8 @@ Run the HCC gap analysis audits on the patients flagged as 'Ready for Audit'. I 
 ```text
 Verify the clinical gaps identified by the HCC Risk Navigator against CMS M.E.A.T. standards. Use your PubMed access to ensure the prescribed treatments legitimately match the proposed diagnosis. 
 
+CRITICAL: When sending this task to the Compliance Reviewer, you MUST explicitly include the exact clinical note snippets and the identified gaps in your message to them. The Reviewer does not have database access and relies entirely on you passing the notes.
+
 Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate the total projected RAF delta and the final revenue impact at $10,000 per 1.0 RAF. List out the verified physician queries. Address the queries to "Dr. Sarah Jenkins, MD" and ensure you cite the exact FHIR DocumentReference IDs.
 ```
 **Output Highlights:**
