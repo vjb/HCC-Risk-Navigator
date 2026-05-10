@@ -35,23 +35,18 @@ FIRE leverages the "Agents Assemble" framework by orchestrating three distinct p
 
 ```mermaid
 sequenceDiagram
-    participant User
     participant Orch as Clinical Orchestrator
     participant RN as Risk Navigator
     participant CR as Compliance Reviewer
+    participant RCM as Enterprise RCM Engine
     
-    User->>Orch: "Run baseline audit"
-    Orch-->>User: Baseline Scorecard Table
+    Orch->>RN: 1. Send FHIR Clinical Notes
+    RN-->>Orch: 2. Return Identified Gaps & RAF Delta
     
-    User->>Orch: "Run gap analysis"
-    Orch->>RN: Analyze clinical notes
-    RN-->>Orch: Identified Gaps & RAF Delta
-    Orch-->>User: Gap Findings Output
+    Orch->>CR: 3. Send Gaps for M.E.A.T. Verification
+    CR-->>Orch: 4. Return Verified 5Ts Deliverable
     
-    User->>Orch: "Verify via M.E.A.T. and PubMed"
-    Orch->>CR: Send proposed gaps
-    CR-->>Orch: M.E.A.T. Verification & 5Ts
-    Orch-->>User: Final Verified 5Ts Deliverable
+    Orch->>RCM: 5. Route Task JSON Payload
 ```
 
 ### The Agentic Prompts
