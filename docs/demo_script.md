@@ -56,4 +56,4 @@
 "Because this pipeline is deterministic, it scales infinitely with zero upfront cost. If we deploy this to a single mid-sized hospital with 10,000 patients and find just a 5% gap prevalence, that's $1,000,000 in recovered annual revenue. On our 10% shared savings model, that is $100,000 in ARR for us per hospital."
 
 **[Slide 8: The Vision]**
-"This is the endgame of healthcare AI. We aren't just summarizing text—we are routing authenticated clinical data into actionable financial workflows. Thank you."
+"This is the endgame of healthcare AI. We aren't just summarizing text—we are using Prompt Opinion to route authenticated clinical data into actionable financial workflows. Thank you."
