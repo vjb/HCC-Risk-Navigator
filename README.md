@@ -38,10 +38,10 @@ Please run the audit_v28_cohort tool to sweep a block of patients. Display the b
 ![Step 1 Scorecard](./assets/step1_scorecard.png)
 *(Shows 6 patients fetched from FHIR, highlighting Tamara, Richard, and Maria as having pending gap analysis due to attached clinical notes).*
 
-### Step 2: Risk Analysis
+### Step 2: Deterministic Risk Analysis
 **Prompt:**
 ```text
-Now, you must consult the 'HCC Risk Navigator' agent. You MUST pass the ENTIRE raw JSON array from the tool output to the Risk Navigator in ONE SINGLE message. Ask the Risk Navigator to analyze the clinical_notes_text against the hcc_reference_v28 to identify high-value coding gaps for any patients flagged as needing review. Return the exact gap descriptions, projected_raf, and Revenue Impact calculations.
+Perfect. You MUST extract the ENTIRE raw JSON array from your audit_v28_cohort tool execution and pass it directly to the 'HCC Risk Navigator' agent in ONE SINGLE message. Do not filter or summarize the data yourself. Instruct the Risk Navigator to analyze the clinical_notes_text against the V28 guidelines using its ICD-10 MS-DRG vectorstore for any patients flagged with unreviewed notes. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact.
 ```
 **Output Highlights:**
 ![Step 2 Gap Findings](./assets/step2_gaps.png)
