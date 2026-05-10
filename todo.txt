@@ -1,0 +1,3 @@
+we do need ot get this runniing on render or whatever, but lets do that once this hting starts working.
+
+i would like to get them working with some kind of security so i can protect them when its time for the marketplace, but that is later too. 

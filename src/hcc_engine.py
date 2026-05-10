@@ -160,7 +160,11 @@ def audit_hcc_gaps(fhir_context: dict[str, Any]) -> dict[str, Any]:
     patient_id   = patient.get("id", "unknown")
     patient_name = "Unknown"
     if patient.get("name") and len(patient["name"]) > 0:
-        patient_name = patient["name"][0].get("text", "Unknown")
+        name_obj = patient["name"][0]
+        if "text" in name_obj:
+            patient_name = name_obj["text"]
+        elif "family" in name_obj and "given" in name_obj:
+            patient_name = f"{name_obj['given'][0]} {name_obj['family']}"
 
     # ── Step 5: Compose audit summary for agent ───────────────────────────────
     hcc_coded_count = sum(1 for c in coded_conditions_detail if c["hcc_code"] and c["hcc_code"] > 0)
