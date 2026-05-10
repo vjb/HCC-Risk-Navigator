@@ -39,31 +39,26 @@ Please run the audit_v28_cohort tool to sweep a block of patients. Display the b
 *(Shows 6 patients fetched from FHIR, highlighting Tamara, Richard, and Maria as having pending gap analysis due to attached clinical notes).*
 
 ### Step 2: Deterministic Risk Analysis
+*(Switch your chat to the **HCC Risk Navigator** agent)*
 **Prompt:**
 ```text
-Perfect. You MUST extract the ENTIRE raw JSON array from your audit_v28_cohort tool execution and pass it directly to the 'HCC Risk Navigator' agent in ONE SINGLE message. Do not filter or summarize the data yourself. Instruct the Risk Navigator to analyze the clinical_notes_text against the V28 guidelines using its ICD-10 MS-DRG vectorstore for any patients flagged with unreviewed notes. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact. CRITICAL: DO NOT consult the Compliance Reviewer yet. We will do that in the next step.
+Analyze this FHIR JSON for Tamara Williams, Richard Chen, and Maria Gonzalez against the V28 guidelines using your ICD-10 MS-DRG vectorstore. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact. 
+
+[PASTE THE JSON FROM STEP 1 HERE]
 ```
 **Output Highlights:**
 ![Step 2 Gap Findings](./assets/step2_gaps.png)
 *(Successfully identifies E11.40 for Tamara, J44.1 for Richard, and N18.4 for Maria with exact RAF Deltas).*
 
-### Step 3: Compliance Verification
+### Step 3: Compliance Verification & The 5Ts Deliverable
+*(Switch your chat to the **Compliance Reviewer** agent)*
 **Prompt:**
 ```text
-Excellent. Now consult the 'Compliance Reviewer' agent in ONE SINGLE message. Pass it the exact clinical evidence quotes and proposed ICD-10 codes returned by the Risk Navigator. Ask the Compliance Reviewer to verify the evidence against CMS MEAT standards and return the compliance verdicts.
-```
-**Output Highlights:**
-![Step 3 Compliance](./assets/step3_compliance.png)
-*(All three findings verified and 🟢 APPROVED).*
+Verify these clinical gaps against CMS M.E.A.T. standards. Use your PubMed access to ensure the prescribed treatments legitimately match the proposed diagnosis. 
 
-### Step 4: The 5Ts Deliverable
-**Prompt:**
-```text
-Finally, compile everything into a complete 5Ts deliverable. 
+Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate the total projected RAF delta and the final revenue impact at $10,000 per 1.0 RAF. List out the verified physician queries. Address the queries to "Dr. Sarah Jenkins, MD" and ensure you cite the exact FHIR DocumentReference IDs.
 
-CRITICAL INSTRUCTIONS:
-- Table Math: You must explicitly list the current_raf (e.g., 0.104 or 0.000). Add the gap's RAF weight to get the projected_raf, and calculate Revenue Impact at $10,000 per 1.0 RAF delta. 
-- Templates: Generate distinct Physician Query Drafts for EACH approved gap. Address the queries to "Dr. Sarah Jenkins, MD" (the attending physician on record for this cohort), ensure the exact Patient Name and clinical condition are explicitly written out, and cite the specific FHIR DocumentReference ID where the clinical evidence was found.
+[PASTE THE GAP OUTPUT FROM STEP 2 HERE]
 ```
 **Output Highlights:**
 ![Step 4 Final Output](./assets/step4_5ts.png)
