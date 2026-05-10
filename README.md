@@ -7,6 +7,7 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
 **Business Model:** FIRE operates on a shared savings model. We charge minimal upfront SaaS fees, taking exactly 10% of the net new RAF revenue generated from our identified and approved coding gaps. This perfectly aligns our incentives with the hospital's financial outcomes.
 
 ## The Technology Stack
+* **Render Cloud Deployment**: The MCP backend is permanently deployed as a high-availability cloud service on Render (`https://fire-mcp-backend.onrender.com/mcp/sse`). No local `ngrok` tunnels required for the judges to test the pipeline.
 * **FastAPI + FastMCP**: Serves the `audit_v28_cohort` MCP tool.
 * **SHARP Protocol Middleware & HTI-1 Interoperability**: Intercepts `X-FHIR-Server-URL` and authentication headers. By using the SHARP extension specs and FHIR standards, FIRE is fully compatible with **Darena Health** and HTI-1 mandates, making it capable of plugging instantly into any compliant EHR connected to the platform.
 * **Live FHIR R4 Integration**: We do not use fake mock data for the demo. FIRE queries a live, public HAPI FHIR server. You can view one of our exact hydrated patients (Tamara Williams) live on the network here:
