@@ -45,7 +45,7 @@
 
 **[Demo Step 4: System Hand-off]**
 *(Paste Prompt 4 into the chat)*
-"Finally, we don't just output a summary. FIRE generates a highly-structured JSON payload—complete with clinical evidence snippets, priority flags, and routing tags—so we can instantly POST this task to an enterprise RCM engine like Epic Workqueues or ServiceNow."
+"Finally, we don't just output a summary. FIRE generates a highly-structured JSON payload—matching the EPIC HCLS model format—so we can instantly POST this task to an enterprise RCM engine."
 
 ---
 
