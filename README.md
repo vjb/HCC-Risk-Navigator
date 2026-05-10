@@ -61,7 +61,7 @@ To prioritize the clinical documentation workflow, the engine first establishes 
 
 **Prompt:**
 ```text
-Run a baseline audit on our newest FHIR patient cohort and show me the scorecard. I need to see the current RAF value of the group and identify exactly which patients have clinical notes attached that are ready for gap analysis.
+Run a baseline audit on our newest FHIR patient cohort and show me the scorecard.
 ```
 **Output Highlights:**
 <!-- Insert Step 1 Screenshot Here -->
@@ -70,7 +70,7 @@ Run a baseline audit on our newest FHIR patient cohort and show me the scorecard
 #### Step 2: Deterministic Risk Analysis
 **Prompt:**
 ```text
-Run the HCC gap analysis audit on all the patients that are marked ready for audit. and list them
+Run the HCC gap analysis audit on all patients marked ready for audit and list them.
 ```
 **Output Highlights:**
 <!-- Insert Step 2 Screenshot Here -->
@@ -79,7 +79,7 @@ Run the HCC gap analysis audit on all the patients that are marked ready for aud
 #### Step 3: RAF Impact Calculation
 **Prompt:**
 ```text
-so whats the total raf increase potential?
+so whats the total raf increase and revenue impact potential?
 ```
 **Output Highlights:**
 <!-- Insert Step 3 Screenshot Here -->
