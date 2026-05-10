@@ -14,7 +14,13 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
   * [View FHIR Patient Resource](https://hapi.fhir.org/baseR4/Patient/132026010)
   * [View FHIR Clinical Note (Base64 Encoded DocumentReference)](https://hapi.fhir.org/baseR4/DocumentReference?subject=Patient/132026010)
 
-![Architecture Diagram](./assets/architecture.png)
+```mermaid
+graph TD
+    PO[Prompt Opinion Platform] -->|SHARP Context| FastMCP[FIRE FastMCP Server]
+    FastMCP -->|REST| FHIR[(HAPI FHIR R4)]
+    FastMCP -->|Vector Search| VDB[(ICD-10 MS-DRG VectorStore)]
+    FastMCP -->|REST| PubMed[(PubMed API)]
+```
 
 ## Core Implementation Files
 
@@ -33,11 +39,37 @@ FIRE leverages the "Agents Assemble" framework by orchestrating three distinct p
 2. **HCC Risk Navigator (Analyst)**: A sub-agent dedicated exclusively to cross-referencing `clinical_notes_text` against the CMS V28 HCC dictionary. It identifies the gaps and calculates the RAF math (Current vs. Projected). It has native vectorstore access to the official ICD-10 MS-DRG Version 43.1 guidelines to pull precise diagnostic codes without hallucinating.
 3. **Compliance Reviewer (The Zero-Trust Firewall)**: A final checkpoint agent that acts as a zero-trust gatekeeper. It does not have direct database or FHIR access. Its sole purpose is to prevent fraud by verifying that all proposed codes are backed by strict CMS M.E.A.T. (Monitor, Evaluate, Assess, Treat) criteria found in the clinical notes. It is grounded via a native PubMed integration, allowing it to cross-reference prescribed treatments against established medical literature to validate the clinical care.
 
-![Multi-Agent Hand-off](./assets/agent_topology.png)
+```mermaid
+sequenceDiagram
+    participant User
+    participant Orch as Clinical Orchestrator
+    participant RN as Risk Navigator
+    participant CR as Compliance Reviewer
+    participant FIRE as FIRE MCP Backend
+    
+    User->>Orch: "Run baseline audit"
+    Orch->>FIRE: audit_v28_cohort()
+    FIRE-->>Orch: Raw Patient Cohort JSON
+    Orch-->>User: Baseline Scorecard Table
+    
+    User->>Orch: "Run gap analysis"
+    Orch->>RN: Analyze clinical notes
+    RN->>FIRE: Query VectorStore for MS-DRG Guidelines
+    FIRE-->>RN: ICD-10 Coding Proof
+    RN-->>Orch: Identified Gaps & RAF Delta
+    Orch-->>User: Gap Findings Output
+    
+    User->>Orch: "Verify via M.E.A.T. and PubMed"
+    Orch->>CR: Send proposed gaps
+    CR->>FIRE: Search PubMed for Treatments
+    FIRE-->>CR: Medical Literature Evidence
+    CR-->>Orch: M.E.A.T. Verification & 5Ts
+    Orch-->>User: Final Verified 5Ts Deliverable
+```
 
 ### Watch The End-to-End Demo
-![E2E Pipeline Demo](./assets/fire_e2e_demo.webp)
-*(Click to view the full deterministic, multi-agent execution pipeline inside Prompt Opinion)*
+<!-- Insert E2E Pipeline Demo Video Here -->
+*(The deterministic, multi-agent execution pipeline inside Prompt Opinion)*
 
 ### The Agentic Prompts
 All the exact agent system prompts (Orchestrator, Risk Navigator, Compliance Reviewer) that run this architecture natively on the Prompt Opinion platform have been documented here:
@@ -51,7 +83,7 @@ To prioritize the clinical documentation workflow, the engine first establishes 
 Run a baseline audit on our newest FHIR patient cohort and show me the scorecard. I need to see the current RAF value of the group and identify exactly which patients have clinical notes attached that are ready for gap analysis.
 ```
 **Output Highlights:**
-![Step 1 Scorecard](./assets/step1_scorecard.png)
+<!-- Insert Step 1 Screenshot Here -->
 *(Shows 6 patients fetched from FHIR, highlighting Tamara, Richard, and Maria as having pending gap analysis due to attached clinical notes).*
 
 ### Step 2: Deterministic Risk Analysis
@@ -60,7 +92,7 @@ Run a baseline audit on our newest FHIR patient cohort and show me the scorecard
 Run the HCC gap analysis audits on the patients flagged as 'Ready for Audit'. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact.
 ```
 **Output Highlights:**
-![Step 2 Gap Findings](./assets/step2_gaps.png)
+<!-- Insert Step 2 Screenshot Here -->
 *(Successfully identifies E11.40 for Tamara, J44.1 for Richard, and N18.4 for Maria with exact RAF Deltas).*
 
 ### Step 3: Compliance Verification & The 5Ts Deliverable
@@ -71,7 +103,7 @@ Verify the clinical gaps identified by the HCC Risk Navigator against CMS M.E.A.
 Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate the total projected RAF delta and the final revenue impact at $10,000 per 1.0 RAF. List out the verified physician queries. Address the queries to "Dr. Sarah Jenkins, MD" and ensure you cite the exact FHIR DocumentReference IDs.
 ```
 **Output Highlights:**
-![Step 4 Final Output](./assets/step4_5ts.png)
+<!-- Insert Step 3 Screenshot Here -->
 *(Final report yields $9,540 in immediate revenue impact, fully customized Physician Query letters, and zero LLM hallucinations).*
 
 ## Market Analysis & Revenue Projections
