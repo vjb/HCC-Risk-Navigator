@@ -92,11 +92,11 @@ Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate
 #### Step 4: System Integration & Workflow Hand-Off
 **Prompt:**
 ```text
-To finalize this workflow, output the raw JSON payload for the generated RCM 'Task' deliverable for Tamara Williams so we can POST it to an enterprise workflow engine (like Jira or ServiceNow). Additionally, list the exact SHARP protocol and Prompt Opinion headers that securely grounded this session to the live FHIR server ( X-FHIR-Server-URL, X-FHIR-Access-Token, X-Patient-ID, X-Agent-ID, and X-FHIR-Refresh-Url.)
+To finalize this workflow, output the raw JSON payload for the generated RCM 'Task' deliverable for Tamara Williams so we can POST it to an enterprise workflow engine (like Jira or ServiceNow).
 ```
 **Output Highlights:**
 <!-- Insert Step 4 Screenshot Here -->
-*(Generates the raw JSON payload for immediate task routing, and surfaces the live SHARP headers validating the authenticated FHIR session).*
+*(Generates the raw JSON payload for immediate task routing).*
 
 ## Core Implementation Files
 Here are the critical backend components of the codebase that power these live marketplace assets:

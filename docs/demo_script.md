@@ -45,7 +45,7 @@
 
 **[Demo Step 4: System Hand-off]**
 *(Paste Prompt 4 into the chat)*
-"Finally, we don't just output a summary. FIRE generates the raw JSON payload to instantly route this task to an enterprise RCM engine like Jira, alongside the authenticated SHARP headers that securely grounded this entire session."
+"Finally, we don't just output a summary. FIRE generates the raw JSON payload to instantly route this task to an enterprise RCM engine like Jira."
 
 ---
 
