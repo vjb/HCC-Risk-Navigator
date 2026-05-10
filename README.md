@@ -41,7 +41,7 @@ Please run the audit_v28_cohort tool to sweep a block of patients. Display the b
 ### Step 2: Risk Analysis
 **Prompt:**
 ```text
-Now, you must consult the 'HCC Risk Navigator' agent. You MUST pass the ENTIRE raw JSON array from the tool output to the Risk Navigator in ONE SINGLE message. Do not summarize the data or send multiple messages. Ask the Risk Navigator to analyze the clinical_notes_text against the hcc_reference_v28 to identify high-value coding gaps for Tamara, Richard, and Maria, and return the exact gap descriptions, projected_raf, and Revenue Impact calculations.
+Now, you must consult the 'HCC Risk Navigator' agent. You MUST pass the ENTIRE raw JSON array from the tool output to the Risk Navigator in ONE SINGLE message. Do not summarize the data or send multiple messages. Ask the Risk Navigator to analyze the clinical_notes_text against the hcc_reference_v28 to identify high-value coding gaps for Tamara, Richard, and Maria. Instruct it to explicitly query its ICD-10 MS-DRG Version 43.1 vectorstore to pull the precise diagnostic codes. Return the exact gap descriptions, projected_raf, and Revenue Impact calculations.
 ```
 **Output Highlights:**
 ![Step 2 Gap Findings](./assets/step2_gaps.png)
@@ -63,7 +63,7 @@ Finally, compile everything into a complete 5Ts deliverable.
 
 CRITICAL INSTRUCTIONS:
 - Table Math: You must explicitly list the current_raf (e.g., 0.104 or 0.000). Add the gap's RAF weight to get the projected_raf, and calculate Revenue Impact at $10,000 per 1.0 RAF delta. 
-- Templates: Generate distinct Physician Query Drafts for EACH approved gap. Address the queries to "Dr. Sarah Jenkins, MD" (the attending physician on record for this cohort), and ensure the exact Patient Name and exact clinical condition are explicitly written out.
+- Templates: Generate distinct Physician Query Drafts for EACH approved gap. Address the queries to "Dr. Sarah Jenkins, MD" (the attending physician on record for this cohort), ensure the exact Patient Name and clinical condition are explicitly written out, and cite the specific FHIR DocumentReference ID where the clinical evidence was found.
 ```
 **Output Highlights:**
 ![Step 4 Final Output](./assets/step4_5ts.png)
