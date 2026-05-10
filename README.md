@@ -6,6 +6,17 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
 
 **Business Model:** FIRE operates on a shared savings model. We charge no upfront SaaS fees, taking exactly 10% of the net new RAF revenue generated from our identified and approved coding gaps. In our single demo run alone, the engine recovers $9,540/yr across just 3 patients, netting FIRE $954 in immediate recurring value.
 
+## 📖 Glossary of Terms
+To help judges unfamiliar with healthcare Revenue Cycle Management (RCM) understand the exact value of this pipeline, here are the key terms used:
+
+* **FIRE**: FHIR-Integrated Revenue Engine. The name of our project and MCP backend server.
+* **FHIR (Fast Healthcare Interoperability Resources)**: The modern, global API standard for exchanging electronic health records (EHR).
+* **ICD-10 Codes**: The universal alphanumeric codes used by clinicians to classify every disease, injury, and symptom.
+* **HCC (Hierarchical Condition Category)**: A risk-adjustment model used by Medicare. Not all ICD-10 codes map to an HCC. HCC codes carry a specific "weight" that translates directly to higher Medicare reimbursement for treating sicker patients.
+* **RAF (Risk Adjustment Factor)**: A patient's cumulative health score, calculated by adding up the weights of all their active HCC codes. A higher RAF score means the hospital gets paid more annually to manage that patient's complex care. ($10,000 per 1.0 RAF).
+* **CMS V28**: The newest, much stricter version of the Medicare HCC scoring model. In V28, generic diagnoses are now worth $0. Hospitals are currently losing millions of dollars in revenue because their documentation isn't specific enough to meet V28's requirements.
+* **CMS MEAT Standards**: To legally claim an HCC code, a doctor's clinical note must explicitly show they are **M**onitoring, **E**valuating, **A**ssessing, or **T**reating the condition. Our Compliance Reviewer agent specifically verifies this to prevent fraud.
+
 ## ⚙️ The Technology Stack
 * **FastAPI + FastMCP**: Serves the `audit_v28_cohort` MCP tool.
 * **SHARP Protocol Middleware**: Intercepts `X-FHIR-Server-URL` and authentication headers from the Prompt Opinion platform, proving deep integration with the platform's standard capabilities.
