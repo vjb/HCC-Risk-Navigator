@@ -14,13 +14,6 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
   * [View FHIR Patient Resource](https://hapi.fhir.org/baseR4/Patient/132026010)
   * [View FHIR Clinical Note (Base64 Encoded DocumentReference)](https://hapi.fhir.org/baseR4/DocumentReference?subject=Patient/132026010)
 
-```mermaid
-graph TD
-    PO[Prompt Opinion Platform] -->|SHARP Context| FastMCP[FIRE FastMCP Server]
-    FastMCP -->|REST| FHIR[(HAPI FHIR R4)]
-    FastMCP -->|Vector Search| VDB[(ICD-10 MS-DRG VectorStore)]
-    FastMCP -->|REST| PubMed[(PubMed API)]
-```
 
 ## Core Implementation Files
 
@@ -30,7 +23,7 @@ To highlight the deterministic nature of the Prompt Opinion platform integration
 |------|--------------|--------------------------------|
 | [`src/server.py`](src/server.py) | FastMCP Server & Auth | **[Capability Injection (L413-L431)](src/server.py#L413-L431):** We programmatically extend the FastMCP initialization options to register the `ai.promptopinion/fhir-context` capability. This ensures our server natively authenticates and processes Prompt Opinion's SHARP headers and dynamic FHIR context. |
 | [`src/hcc_engine.py`](src/hcc_engine.py) | Deterministic Baseline Calculator | **[Raw Context Handoff (L180-L208)](src/hcc_engine.py#L180-L208):** This engine uses ZERO LLMs. It calculates the baseline mathematically using CMS V28 maps, and explicitly packages the raw `clinical_notes_text` array to hand back to the Prompt Opinion LLM agent, which performs the *real* gap analysis intelligence. |
-| [`scripts/record_demo.py`](scripts/record_demo.py) | E2E Automation | Playwright script that automates the Prompt Opinion UI to deterministically drive the Orchestrator, Risk Navigator, and Compliance Reviewer hand-offs. |
+
 
 ## The Multi-Agent Topology
 FIRE leverages the "Agents Assemble" framework by orchestrating three distinct personas in a strict data-handoff topology:
