@@ -27,8 +27,8 @@ FIRE leverages the "Agents Assemble" framework by orchestrating three distinct p
 ## The Demo Execution (Step-by-Step)
 To guarantee flawless, deterministic execution without LLM context overload, the demonstration is run through a strict 4-step conversational hand-off. The judges can easily reproduce this exact output.
 
-### Step 1: The Cohort Scorecard (Showing Financial Impact First)
-To immediately emphasize the financial value of the pipeline, the first deliverable is a "RAF Gap Scorecard." This explicitly calculates the estimated annual revenue impact in dollars (using the industry-standard $10,000 per 1.0 RAF point) before any gap analysis even begins.
+### Step 1: Cohort Triage & Baseline Scorecard
+To prioritize the clinical documentation workflow, the engine first establishes a financial baseline. It calculates the current value of each patient's coded conditions and scans the FHIR records to triage the queue, flagging exactly who has unreviewed unstructured clinical notes hiding potential lost revenue.
 
 **Prompt:**
 ```text
