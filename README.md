@@ -70,16 +70,16 @@ Run a baseline audit on our newest FHIR patient cohort and show me the scorecard
 #### Step 2: Deterministic Risk Analysis
 **Prompt:**
 ```text
-Run the HCC gap analysis audits on the patients flagged as 'Ready for Audit'. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact.
+Run the HCC gap analysis audit on the patient Tamara Williams. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact.
 ```
 **Output Highlights:**
 <!-- Insert Step 2 Screenshot Here -->
-*(Successfully identifies E11.40 for Tamara, J44.1 for Richard, and N18.4 for Maria with exact RAF Deltas).*
+*(Successfully identifies E11.40 for Tamara with the exact RAF Delta).*
 
 #### Step 3: Compliance Verification & The 5Ts Deliverable
 **Prompt:**
 ```text
-Verify the clinical gaps identified by the HCC Risk Navigator against CMS M.E.A.T. standards. Use your PubMed access to ensure the prescribed treatments legitimately match the proposed diagnosis. 
+Verify the clinical gap identified for Tamara Williams against CMS M.E.A.T. standards. Use your PubMed access to ensure the prescribed treatments legitimately match the proposed diagnosis. 
 
 CRITICAL: When sending this task to the Compliance Reviewer, you MUST explicitly include the exact clinical note snippets and the identified gaps in your message to them. The Reviewer does not have database access and relies entirely on you passing the notes.
 
@@ -87,7 +87,7 @@ Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate
 ```
 **Output Highlights:**
 <!-- Insert Step 3 Screenshot Here -->
-*(Final report yields $9,540 in immediate revenue impact, fully customized Physician Query letters, and zero LLM hallucinations).*
+*(Final report yields the exact revenue impact, a fully customized Physician Query letter for Tamara, and zero LLM hallucinations).*
 
 #### Step 4: System Integration & Workflow Hand-Off
 **Prompt:**
