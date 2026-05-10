@@ -18,11 +18,13 @@ During the latest attempt to record the 5-step demo on the Prompt Opinion platfo
     *   *Tamara*: "Unable to retrieve full patient chart data; unable to calculate RAF or identify specific coding gaps directly from the available information."
     *   *Maria*: "Patient not found in the FHIR server or mock EHR system."
 
-## Root Cause Hypothesis
-The **Primary Clinical Orchestrator** is failing to pass the full FHIR context (specifically the `clinical_notes_text` and problem lists) to the **HCC Risk Navigator** sub-agent for all three patients simultaneously. The orchestrator may be truncating the payload, dropping context, or the Risk Navigator is incorrectly attempting to query the FHIR database directly instead of relying purely on the text handed off by the Orchestrator.
+## Root Cause Hypothesis & Deep Dive
+1. **Tool Refetching Failure**: In Step 2, the Risk Navigator is ignoring the Orchestrator's context and attempting to fetch the patient charts individually using its own `audit_hcc_opportunities` MCP tool.
+2. **Missing Local Data**: The public HAPI FHIR server is unreliable. When the `audit_hcc_opportunities` tool fails to find the patients on HAPI, it falls back to the local SQLite DB (`data/mock_ehr.sqlite`).
+3. **Seeding Limitation**: `scripts/seed_db.py` *only* seeds Tamara Williams. It does not seed Richard Chen or Maria Gonzalez. Therefore, the tool returns `{"error": "Patient ... not found in FHIR server or mock EHR."}` for Maria, which the LLM repeats verbatim in the output you saw.
 
 ## Next Steps upon Session Restart
-1.  **Investigate Context Handoff**: Review the Prompt Opinion chat logs or execution traces to see exactly what the Orchestrator sent to the Risk Navigator in Step 2.
-2.  **Prompt Adjustment**: We may need to explicitly instruct the Orchestrator (in `docs/prompts.md`) to serialize and send the COMPLETE clinical notes array for ALL flagged patients when invoking the Risk Navigator tool.
-3.  **MCP Tool Check**: Verify if `hcc_engine.py` is correctly packaging the notes for all 3 patients in the Step 1 output so the Orchestrator has them in memory to pass along.
-4.  **Resume Recording**: Once the handoff is fixed and all 3 patients are successfully audited in Step 2, resume the browser auto-recording sequence.
+1.  **Prompt Adjustment (Orchestrator)**: Update `docs/prompts.md` so the Orchestrator is forced to extract `clinical_notes_text` from the `patient_audits` array and pass it verbatim in its message to the Risk Navigator.
+2.  **Prompt Adjustment (Risk Navigator)**: Instruct the Risk Navigator to *rely strictly on the clinical notes provided in the message* rather than calling the `audit_hcc_opportunities` tool to refetch data.
+3.  **Alternative (DB Seeding)**: Alternatively, we could update `scripts/seed_db.py` to correctly seed Richard and Maria into the local Mock EHR so the tool fallback actually works.
+4.  **Resume Recording**: Once these prompts/DB are fixed, run the demo sequence again.
