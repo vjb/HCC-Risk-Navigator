@@ -63,7 +63,7 @@ Finally, compile everything into a complete 5Ts deliverable.
 
 CRITICAL INSTRUCTIONS:
 - Table Math: You must explicitly list the current_raf (e.g., 0.104 or 0.000). Add the gap's RAF weight to get the projected_raf, and calculate Revenue Impact at $10,000 per 1.0 RAF delta. 
-- Templates: Generate distinct Physician Query Drafts for EACH approved gap. Make up an attending physician's name (e.g., Dr. Smith), but ensure the exact Patient Name and exact clinical condition are explicitly written out.
+- Templates: Generate distinct Physician Query Drafts for EACH approved gap. Address the queries to "Dr. Sarah Jenkins, MD" (the attending physician on record for this cohort), and ensure the exact Patient Name and exact clinical condition are explicitly written out.
 ```
 **Output Highlights:**
 ![Step 4 Final Output](./assets/step4_5ts.png)
