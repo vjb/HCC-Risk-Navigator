@@ -1,12 +1,12 @@
-# 🔥 FIRE: FHIR-Integrated Revenue Engine
+# FIRE: FHIR-Integrated Revenue Engine
 *(Prompt Opinion "Agents Assemble" Hackathon Submission)*
 
-## 📌 Executive Summary
+## Executive Summary
 FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with FHIR R4 servers to automatically audit patient records for CMS V28 HCC coding gaps. By combining a structural MCP tool for data retrieval with three specialized AI agents, FIRE identifies undocumented clinical conditions, gets them verified against CMS MEAT standards, and calculates exact revenue recovery metrics.
 
 **Business Model:** FIRE operates on a shared savings model. We charge minimal upfront SaaS fees, taking exactly 10% of the net new RAF revenue generated from our identified and approved coding gaps. In a representative audit of just 3 patients, the engine can recover $9,540/yr, netting FIRE $954 in recurring value.
 
-## ⚙️ The Technology Stack
+## The Technology Stack
 * **FastAPI + FastMCP**: Serves the `audit_v28_cohort` MCP tool.
 * **SHARP Protocol Middleware**: Intercepts `X-FHIR-Server-URL` and authentication headers from the Prompt Opinion platform, proving deep integration with the platform's standard capabilities.
 * **Live FHIR R4 Integration**: We do not use fake mock data for the demo. FIRE queries a live, public HAPI FHIR server. You can view one of our exact hydrated patients (Tamara Williams) live on the network here:
@@ -14,7 +14,7 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
 
 ![Architecture Diagram](./assets/architecture.png)
 
-## 🤖 The Multi-Agent Topology
+## The Multi-Agent Topology
 FIRE leverages the "Agents Assemble" framework by orchestrating three distinct personas in a strict data-handoff topology:
 
 1. **Clinical Orchestrator (Manager)**: Runs the MCP tool `audit_v28_cohort` to fetch FHIR data. Crucially, it acts as a pure data pipeline, serializing the raw JSON array and handing it directly to the analyst agent to prevent LLM context fragmentation.
@@ -23,7 +23,7 @@ FIRE leverages the "Agents Assemble" framework by orchestrating three distinct p
 
 ![Multi-Agent Hand-off](./assets/agent_topology.png)
 
-## 🎬 The Demo Execution (Step-by-Step)
+## The Demo Execution (Step-by-Step)
 To guarantee flawless, deterministic execution without LLM context overload, the demonstration is run through a strict 4-step conversational hand-off. The judges can easily reproduce this exact output.
 
 ### Step 1: Cohort Sweep
@@ -66,7 +66,7 @@ CRITICAL INSTRUCTIONS:
 ![Step 4 Final Output](./assets/step4_5ts.png)
 *(Final report yields $9,540 in immediate revenue impact, fully customized Physician Query letters, and zero LLM hallucinations).*
 
-## 💰 Market Analysis & Revenue Projections
+## Market Analysis & Revenue Projections
 To understand the financial scale of this technology, here is a highly conservative market analysis for deploying FIRE at a typical mid-sized regional hospital:
 
 **Conservative Assumptions:**
@@ -82,7 +82,7 @@ To understand the financial scale of this technology, here is a highly conservat
 * $1,000,000 × 10% = **$100,000 Annual Recurring Revenue (ARR)** for FIRE per hospital.
 * Capturing just 10 mid-sized hospitals yields a $1M ARR SaaS business with near-zero marginal cost, as the deterministic multi-agent pipeline operates entirely autonomously.
 
-## 📖 Glossary of Terms
+## Glossary of Terms
 To help judges unfamiliar with healthcare Revenue Cycle Management (RCM) understand the exact value of this pipeline, here are the key terms used:
 
 * **FIRE**: FHIR-Integrated Revenue Engine. The name of our project and MCP backend server.
