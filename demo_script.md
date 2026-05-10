@@ -14,14 +14,14 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with l
 
 ---
 
-### [0:30 - 1:00] Step 1: The Cohort Scorecard & Financial Impact
+### [0:30 - 1:00] Step 1: Cohort Triage & Baseline Scorecard
 **Visual:** The Orchestrator runs the `audit_v28_cohort` tool and returns the markdown table.
 **Audio:**
 "Let's see it in action. Our first step is the Cohort Sweep. 
 
-Our Clinical Orchestrator agent reaches out via our custom MCP backend to a live, public HAPI FHIR server—no fake mock data here. It pulls a block of patients and immediately generates a 'RAF Gap Scorecard.' 
+Our Clinical Orchestrator reaches out via our custom MCP backend to a live, public HAPI FHIR server. It pulls a block of patients and generates our Baseline Scorecard. 
 
-We do this to show the financial impact first. Using the industry standard of $10,000 per RAF point, you can clearly see the baseline revenue for each patient and identify exactly who needs a clinical documentation review based on the presence of unstructured notes."
+All we are doing here is establishing the current financial baseline for the hospital—calculating exactly what each patient's current coded conditions are worth. More importantly, the system scans the FHIR records to triage the queue, flagging exactly who has unreviewed clinical notes. These are the patients who are hiding lost revenue."
 
 ---
 
