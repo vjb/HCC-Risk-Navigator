@@ -8,33 +8,23 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
 
 **Business Model:** FIRE operates on a shared savings model. We charge minimal upfront SaaS fees, taking exactly 10% of the net new RAF revenue generated from our identified and approved coding gaps. This perfectly aligns our incentives with the hospital's financial outcomes.
 
-## The Technology Stack
-* **Render Cloud Deployment**: The MCP backend is permanently deployed as a high-availability cloud service on Render. To verify the legitimacy of this live deployment, you can explore the active endpoints:
-  * [Live MCP Server SSE Endpoint](https://fire-mcp-backend.onrender.com/mcp/sse)
-  * [Interactive Swagger UI (/docs)](https://fire-mcp-backend.onrender.com/docs)
-  * [OpenAPI Schema (/openapi.json)](https://fire-mcp-backend.onrender.com/openapi.json)
-* **FastAPI + FastMCP**: Serves the `audit_v28_cohort` MCP tool.
-* **SHARP Protocol Middleware & HTI-1 Interoperability**: Intercepts `X-FHIR-Server-URL` and authentication headers. By using the SHARP extension specs and FHIR standards, FIRE is fully compatible with **Darena Health** and HTI-1 mandates, making it capable of plugging instantly into any compliant EHR connected to the platform.
-* **Live FHIR R4 Integration**: FIRE queries a live, public HAPI FHIR server. You can view one of the exact hydrated patients (Tamara Williams) live on the network here:
-  * [View FHIR Patient Resource](https://hapi.fhir.org/baseR4/Patient/132026010)
-  * [View FHIR Clinical Note (Base64 Encoded DocumentReference)](https://hapi.fhir.org/baseR4/DocumentReference?subject=Patient/132026010)
-
-
-## Core Implementation Files
-
+## Marketplace Integrations
 To highlight the deterministic nature of the Prompt Opinion platform integration, you can view our live production deployments directly on the platform marketplace:
 
 * [**FIRE MCP Tool**](https://app.promptopinion.ai/marketplace/mcp/019d39ef-c21c-703d-a526-e8bcaf8b4fb8)
 * [**HCC Risk Navigator Agent**](https://app.promptopinion.ai/marketplace/agent/019d39f2-f707-719a-b3f1-396b997b5f47)
 * [**Compliance Reviewer Agent**](https://app.promptopinion.ai/marketplace/agent/019d39f3-f6da-779b-b85a-ec474cfde56a)
 
-Here are the critical backend components of the codebase that power these live marketplace assets:
-
-| File | Core Purpose | Prompt Opinion Integration Proof |
-|------|--------------|--------------------------------|
-| [`src/server.py`](src/server.py) | FastMCP Server & Auth | **[Capability Injection (L413-L431)](src/server.py#L413-L431):** We programmatically extend the FastMCP initialization options to register the `ai.promptopinion/fhir-context` capability. This ensures our server natively authenticates and processes Prompt Opinion's SHARP headers and dynamic FHIR context. |
-| [`src/hcc_engine.py`](src/hcc_engine.py) | Deterministic Baseline Calculator | **[Raw Context Handoff (L180-L208)](src/hcc_engine.py#L180-L208):** This engine uses ZERO LLMs. It calculates the baseline mathematically using CMS V28 maps, and explicitly packages the raw `clinical_notes_text` array to hand back to the Prompt Opinion LLM agent, which performs the *real* gap analysis intelligence. |
-
+## The Technology Stack
+* **Live FHIR R4 Integration**: FIRE queries a live, public HAPI FHIR server. You can view one of the exact hydrated patients (Tamara Williams) live on the network here:
+  * [View FHIR Patient Resource](https://hapi.fhir.org/baseR4/Patient/132026010)
+  * [View FHIR Clinical Note (Base64 Encoded DocumentReference)](https://hapi.fhir.org/baseR4/DocumentReference?subject=Patient/132026010)
+* **Render Cloud Deployment**: The MCP backend is permanently deployed as a high-availability cloud service on Render. To verify the legitimacy of this live deployment, you can explore the active endpoints:
+  * [Live MCP Server SSE Endpoint](https://fire-mcp-backend.onrender.com/mcp/sse)
+  * [Interactive Swagger UI (/docs)](https://fire-mcp-backend.onrender.com/docs)
+  * [OpenAPI Schema (/openapi.json)](https://fire-mcp-backend.onrender.com/openapi.json)
+* **FastAPI + FastMCP**: Serves the `audit_v28_cohort` MCP tool.
+* **SHARP Protocol Middleware & HTI-1 Interoperability**: Intercepts `X-FHIR-Server-URL` and authentication headers. By using the SHARP extension specs and FHIR standards, FIRE is fully compatible with **Darena Health** and HTI-1 mandates, making it capable of plugging instantly into any compliant EHR connected to the platform.
 
 ## The Multi-Agent Topology
 FIRE leverages the "Agents Assemble" framework by orchestrating three distinct personas in a strict data-handoff topology:
@@ -49,37 +39,29 @@ sequenceDiagram
     participant Orch as Clinical Orchestrator
     participant RN as Risk Navigator
     participant CR as Compliance Reviewer
-    participant FIRE as FIRE MCP Backend
     
     User->>Orch: "Run baseline audit"
-    Orch->>FIRE: audit_v28_cohort()
-    FIRE-->>Orch: Raw Patient Cohort JSON
     Orch-->>User: Baseline Scorecard Table
     
     User->>Orch: "Run gap analysis"
     Orch->>RN: Analyze clinical notes
-    RN->>FIRE: Query VectorStore for MS-DRG Guidelines
-    FIRE-->>RN: ICD-10 Coding Proof
     RN-->>Orch: Identified Gaps & RAF Delta
     Orch-->>User: Gap Findings Output
     
     User->>Orch: "Verify via M.E.A.T. and PubMed"
     Orch->>CR: Send proposed gaps
-    CR->>FIRE: Search PubMed for Treatments
-    FIRE-->>CR: Medical Literature Evidence
     CR-->>Orch: M.E.A.T. Verification & 5Ts
     Orch-->>User: Final Verified 5Ts Deliverable
 ```
-
-### The Execution Pipeline (Step-by-Step)
-![E2E Pipeline Demo](./assets/fire_e2e_demo.webp)
-*(The deterministic, multi-agent execution pipeline inside Prompt Opinion)*
 
 ### The Agentic Prompts
 All the exact agent system prompts (Orchestrator, Risk Navigator, Compliance Reviewer) that run this architecture natively on the Prompt Opinion platform have been documented here:
 [View Agent System Prompts (`docs/prompts.md`)](docs/prompts.md)
 
-### Step 1: Cohort Triage & Baseline Scorecard
+### The Execution Pipeline (Step-by-Step)
+> **Note:** This pipeline can be entirely automated—from reading the notes all the way to scheduling tasks in Jira. For this demonstration, we are running step-by-step in interactive discovery mode to showcase how the FIRE tool works under the hood. In practice, the final 5Ts deliverable would automatically schedule a ticket in Jira.
+
+#### Step 1: Cohort Triage & Baseline Scorecard
 To prioritize the clinical documentation workflow, the engine first establishes a financial baseline. It calculates the current value of each patient's coded conditions and scans the FHIR records to triage the queue, flagging exactly who has unreviewed unstructured clinical notes hiding potential lost revenue.
 
 **Prompt:**
@@ -87,19 +69,19 @@ To prioritize the clinical documentation workflow, the engine first establishes 
 Run a baseline audit on our newest FHIR patient cohort and show me the scorecard. I need to see the current RAF value of the group and identify exactly which patients have clinical notes attached that are ready for gap analysis.
 ```
 **Output Highlights:**
-![Step 1 Scorecard](./assets/step1_scorecard.png)
+<!-- Insert Step 1 Screenshot Here -->
 *(Shows 6 patients fetched from FHIR, highlighting Tamara, Richard, and Maria as having pending gap analysis due to attached clinical notes).*
 
-### Step 2: Deterministic Risk Analysis
+#### Step 2: Deterministic Risk Analysis
 **Prompt:**
 ```text
 Run the HCC gap analysis audits on the patients flagged as 'Ready for Audit'. I need to see the exact gap descriptions, the vectorstore citations proving the codes, and the projected revenue impact.
 ```
 **Output Highlights:**
-![Step 2 Gap Findings](./assets/step2_gaps.png)
+<!-- Insert Step 2 Screenshot Here -->
 *(Successfully identifies E11.40 for Tamara, J44.1 for Richard, and N18.4 for Maria with exact RAF Deltas).*
 
-### Step 3: Compliance Verification & The 5Ts Deliverable
+#### Step 3: Compliance Verification & The 5Ts Deliverable
 **Prompt:**
 ```text
 Verify the clinical gaps identified by the HCC Risk Navigator against CMS M.E.A.T. standards. Use your PubMed access to ensure the prescribed treatments legitimately match the proposed diagnosis. 
@@ -109,8 +91,25 @@ CRITICAL: When sending this task to the Compliance Reviewer, you MUST explicitly
 Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate the total projected RAF delta and the final revenue impact at $10,000 per 1.0 RAF. List out the verified physician queries. Address the queries to "Dr. Sarah Jenkins, MD".
 ```
 **Output Highlights:**
-![Step 3 Final Output](./assets/step3_5ts.png)
+<!-- Insert Step 3 Screenshot Here -->
 *(Final report yields $9,540 in immediate revenue impact, fully customized Physician Query letters, and zero LLM hallucinations).*
+
+#### Step 4: System Integration & Workflow Hand-Off
+**Prompt:**
+```text
+To finalize this workflow, output the raw JSON payload for the generated RCM 'Task' deliverable for Tamara Williams so we can POST it to our Jira workflow engine. Additionally, list the exact SHARP protocol and Prompt Opinion headers that securely grounded this session to the live FHIR server ( X-FHIR-Server-URL, X-FHIR-Access-Token, X-Patient-ID, X-Agent-ID, and X-FHIR-Refresh-Url.)
+```
+**Output Highlights:**
+<!-- Insert Step 4 Screenshot Here -->
+*(Generates the raw Jira JSON payload for immediate task routing, and surfaces the live SHARP headers validating the authenticated FHIR session).*
+
+## Core Implementation Files
+Here are the critical backend components of the codebase that power these live marketplace assets:
+
+| File | Core Purpose | Prompt Opinion Integration Proof |
+|------|--------------|--------------------------------|
+| [`src/server.py`](src/server.py) | FastMCP Server & Auth | **[Capability Injection (L413-L431)](src/server.py#L413-L431):** We programmatically extend the FastMCP initialization options to register the `ai.promptopinion/fhir-context` capability. This ensures our server natively authenticates and processes Prompt Opinion's SHARP headers and dynamic FHIR context. |
+| [`src/hcc_engine.py`](src/hcc_engine.py) | Deterministic Baseline Calculator | **[Raw Context Handoff (L180-L208)](src/hcc_engine.py#L180-L208):** This engine uses ZERO LLMs. It calculates the baseline mathematically using CMS V28 maps, and explicitly packages the raw `clinical_notes_text` array to hand back to the Prompt Opinion LLM agent, which performs the *real* gap analysis intelligence. |
 
 ## Market Analysis & Revenue Projections
 To understand the financial scale of this technology, here is a highly conservative market analysis for deploying FIRE at a typical mid-sized regional hospital:
