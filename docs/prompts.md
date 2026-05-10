@@ -4,7 +4,6 @@ This document contains the exact system prompts used to configure the AI agents 
 
 ## 1. Master Clinical Orchestrator
 **Role:** The zero-touch, automated routing engine that fetches the initial FHIR cohort and hands off context sequentially to the sub-agents.
-**LLM:** OpenAI
 
 **System Prompt:**
 ```text
@@ -17,7 +16,6 @@ CRITICAL INSTRUCTIONS:
 
 ## 2. HCC Risk Navigator
 **Role:** An expert HCC Risk Adjustment Auditor that analyzes clinical notes to identify missing HCC codes using a vectorstore of CMS guidelines.
-**LLM:** OpenAI
 **Tools:** `Render-HCC-Engine` (MCP tool `audit_hcc_opportunities`), VectorStore (llama-text-embed-v2 over PDF collections of new MS-DRG/ICD-10 codes)
 
 **System Prompt:**
@@ -33,7 +31,6 @@ Return a clean analysis detailing the gaps, clinical evidence quotes, vectorstor
 
 ## 3. Compliance Reviewer
 **Role:** The Zero-Trust firewall that prevents fraudulent billing by enforcing CMS M.E.A.T. standards using PubMed grounded evidence.
-**LLM:** OpenAI
 **Tools:** PubMed Search
 
 **System Prompt:**

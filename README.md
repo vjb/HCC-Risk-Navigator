@@ -9,7 +9,7 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
 **Business Model:** FIRE will operate on a shared savings model. We charge minimal upfront SaaS fees, taking exactly 10% of the net new RAF revenue generated from our identified and approved coding gaps. This perfectly aligns our incentives with the hospital's financial outcomes.
 
 ## Marketplace Integrations
-To highlight the deterministic nature of the Prompt Opinion platform integration, you can view our live production deployments directly on the platform marketplace:
+You can view our live production deployments (the FIRE MCP Server and all three Agents) directly on the Prompt Opinion Marketplace:
 
 * [**FIRE MCP Tool**](https://app.promptopinion.ai/marketplace/mcp/019d39ef-c21c-703d-a526-e8bcaf8b4fb8)
 * [**HCC Risk Navigator Agent**](https://app.promptopinion.ai/marketplace/agent/019d39f2-f707-719a-b3f1-396b997b5f47)
