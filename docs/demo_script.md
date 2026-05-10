@@ -37,15 +37,19 @@
 
 **[Demo Step 2: Gap Analysis]**
 *(Paste Prompt 2 into the chat)*
-"Next, we pass Tamara's notes to the Risk Navigator. The Navigator cross-references the clinical text against our Vectorstore of CMS guidelines. Notice how it isolates Tamara Williams' chart, identifies the exact ICD-10 code (E11.40), and cites the exact clinical evidence to prove the code."
+"Next, we pass the flagged notes to the Risk Navigator. The Navigator cross-references the clinical text against the CMS guidelines. Notice how it isolates Tamara, Richard, and Maria, identifying the exact ICD-10 codes and citing the clinical evidence to prove each gap."
 
-**[Demo Step 3: Compliance]**
+**[Demo Step 3: RAF Impact Calculation]**
 *(Paste Prompt 3 into the chat)*
-"Now for the Last Mile. We pass these findings to the Compliance Reviewer. It has zero database access. It acts as an internal auditor, verifying that the proposed treatments legitimately match the diagnosis via PubMed, and ensuring strict CMS M.E.A.T. criteria are met. Look at those green checkmarks: zero hallucinations, fully verified."
+"We can then ask the engine to calculate the total RAF impact. It deterministically sums the deltas, giving us the exact financial value of these discovered gaps across the cohort."
 
-**[Demo Step 4: System Hand-off]**
+**[Demo Step 4: Compliance]**
 *(Paste Prompt 4 into the chat)*
-"Finally, we don't just output a summary. FIRE generates a highly-structured JSON payload (matching the EPIC HCLS model format) so we can instantly POST this task to an enterprise RCM engine."
+"Now for the Last Mile. We pass these findings to the Compliance Reviewer. It acts as an internal auditor, verifying that the proposed treatments legitimately match the diagnosis via PubMed, and ensuring strict CMS M.E.A.T. criteria are met. Look at those green checkmarks: zero hallucinations, fully verified."
+
+**[Demo Step 5: System Hand-off]**
+*(Paste Prompt 5 into the chat)*
+"Finally, we don't just output a summary. FIRE generates a highly-structured JSON payload (matching the EPIC HCLS model format) so we can instantly POST these tasks to an enterprise RCM engine."
 
 ---
 

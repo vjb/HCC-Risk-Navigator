@@ -73,32 +73,37 @@ Run a baseline audit on our newest FHIR patient cohort and show me the scorecard
 #### Step 2: Deterministic Risk Analysis
 **Prompt:**
 ```text
-Run the HCC gap analysis audit on the patient Tamara Williams. I need to see the exact gap descriptions, the clinical evidence proving the codes, and the projected revenue impact.
+Run the HCC gap analysis audit on all the patients that are marked ready for audit. and list them
 ```
 **Output Highlights:**
 <!-- Insert Step 2 Screenshot Here -->
-*(Successfully identifies E11.40 for Tamara with the exact RAF Delta).*
+*(Successfully cross-references the clinical text against the CMS V28 dictionary, identifying hidden coding gaps for Tamara, Richard, and Maria).*
 
-#### Step 3: Compliance Verification & The 5Ts Deliverable
+#### Step 3: RAF Impact Calculation
 **Prompt:**
 ```text
-Verify the clinical gap identified for Tamara Williams against CMS M.E.A.T. standards. Use your PubMed access to ensure the prescribed treatments legitimately match the proposed diagnosis. 
-
-CRITICAL: When sending this task to the Compliance Reviewer, you MUST explicitly include the exact clinical note snippets and the identified gaps in your message to them. The Reviewer does not have database access and relies entirely on you passing the notes.
-
-Then, compile the findings into a complete 5Ts deliverable. Explicitly calculate the total projected RAF delta and the final revenue impact at $10,000 per 1.0 RAF. List out the verified physician queries. Address the queries to "Dr. Sarah Jenkins, MD".
+so whats the total raf increase potential?
 ```
 **Output Highlights:**
 <!-- Insert Step 3 Screenshot Here -->
-*(Final report yields the exact revenue impact, a fully customized Physician Query letter for Tamara, and zero LLM hallucinations).*
+*(Calculates the exact cumulative RAF delta across the cohort).*
 
-#### Step 4: System Integration & Workflow Hand-Off
+#### Step 4: Compliance Verification
 **Prompt:**
 ```text
-To finalize this workflow, output the raw JSON payload for the generated RCM 'Task' deliverable for Tamara Williams so we can POST it to an enterprise workflow engine (like Epic Workqueues or ServiceNow). Please structure the JSON with realistic enterprise fields like the EPIC HCLS MODEL.
+check with compliance
 ```
 **Output Highlights:**
 <!-- Insert Step 4 Screenshot Here -->
+*(The Compliance Reviewer verifies the proposed codes against CMS M.E.A.T. criteria via PubMed, resulting in strict green-check approvals).*
+
+#### Step 5: System Integration & Workflow Hand-Off
+**Prompt:**
+```text
+write the json to generate the task in epic in hcls format assign dates two days from now and assign to dr. smith
+```
+**Output Highlights:**
+<!-- Insert Step 5 Screenshot Here -->
 *(Generates a highly structured, enterprise-grade JSON payload for immediate RCM task routing).*
 
 ## Core Implementation Files
