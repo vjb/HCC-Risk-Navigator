@@ -8,7 +8,7 @@ FIRE is a deterministic, multi-agent AI pipeline that directly interfaces with F
 
 ## The Technology Stack
 * **FastAPI + FastMCP**: Serves the `audit_v28_cohort` MCP tool.
-* **SHARP Protocol Middleware**: Intercepts `X-FHIR-Server-URL` and authentication headers from the Prompt Opinion platform, proving deep integration with the platform's standard capabilities.
+* **SHARP Protocol Middleware & HTI-1 Interoperability**: Intercepts `X-FHIR-Server-URL` and authentication headers. By using the SHARP extension specs and FHIR standards, FIRE is fully compatible with **Darena Health** and HTI-1 mandates, making it capable of plugging instantly into any compliant EHR connected to the platform.
 * **Live FHIR R4 Integration**: We do not use fake mock data for the demo. FIRE queries a live, public HAPI FHIR server. You can view one of our exact hydrated patients (Tamara Williams) live on the network here:
   [View Real FHIR Patient Resource](https://hapi.fhir.org/baseR4/Patient/132026010)
 
@@ -19,14 +19,16 @@ FIRE leverages the "Agents Assemble" framework by orchestrating three distinct p
 
 1. **Clinical Orchestrator (Manager)**: Runs the MCP tool `audit_v28_cohort` to fetch FHIR data. Crucially, it acts as a pure data pipeline, serializing the raw JSON array and handing it directly to the analyst agent to prevent LLM context fragmentation.
 2. **HCC Risk Navigator (Analyst)**: A sub-agent dedicated exclusively to cross-referencing `clinical_notes_text` against the CMS V28 HCC dictionary. It identifies the gaps and calculates the RAF math (Current vs. Projected).
-3. **Compliance Reviewer (Auditor)**: A final checkpoint agent that verifies the proposed ICD-10 codes against the exact text quotes extracted from the notes to ensure CMS MEAT (Monitor, Evaluate, Assess, Treat) documentation standards are met before physician queries are drafted.
+3. **Compliance Reviewer (The Zero-Trust Firewall)**: A final checkpoint agent that acts as a zero-trust gatekeeper. It does not have direct database or FHIR access. Its sole purpose is to prevent fraud by verifying that all proposed codes are backed by strict CMS M.E.A.T. (Monitor, Evaluate, Assess, Treat) criteria found in the clinical notes.
 
 ![Multi-Agent Hand-off](./assets/agent_topology.png)
 
 ## The Demo Execution (Step-by-Step)
 To guarantee flawless, deterministic execution without LLM context overload, the demonstration is run through a strict 4-step conversational hand-off. The judges can easily reproduce this exact output.
 
-### Step 1: Cohort Sweep
+### Step 1: The Cohort Scorecard (Showing Financial Impact First)
+To immediately emphasize the financial value of the pipeline, the first deliverable is a "RAF Gap Scorecard." This explicitly calculates the estimated annual revenue impact in dollars (using the industry-standard $10,000 per 1.0 RAF point) before any gap analysis even begins.
+
 **Prompt:**
 ```text
 Please run the audit_v28_cohort tool to sweep a block of patients. Display the baseline cohort scorecard to me so I can see who needs CDI review.
