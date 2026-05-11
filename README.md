@@ -58,6 +58,8 @@ The system calculates the current value of each patient's coded conditions and s
 Run a baseline audit on our newest FHIR patient cohort and show me the scorecard.
 ```
 
+![Baseline Scorecard](assets/step1_baseline.png)
+
 ### Step 2: Risk Analysis
 The Risk Navigator agent cross-references the retrieved clinical text against the CMS V28 dictionary to identify hidden coding gaps.
 
