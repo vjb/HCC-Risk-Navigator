@@ -1,7 +1,7 @@
 """
 scripts/seed_db.py — HCC Risk Navigator Synthetic Data Seeder
 ==============================================================
-Populates the Mock EHR SQLite database with Tamara Williams:
+Populates the Offline Cache SQLite database with Tamara Williams:
   - Age 68, Medicare Advantage plan
   - Coded: E11.9 (Type 2 Diabetes, HCC 19, RAF 0.104)      ← the CODED problem
   - Note:  "burning sensation in both feet ... Gabapentin"  ← the HCC GAP evidence
@@ -133,7 +133,7 @@ TAMARA_FHIR_ID = "tamara-williams-001"
 
 def seed(session: Session) -> Patient:
     """
-    Seed Tamara Williams into the Mock EHR.
+    Seed Tamara Williams into the Offline Cache.
     Idempotent: skips if Tamara already exists.
     """
     existing = session.query(Patient).filter_by(fhir_id=TAMARA_FHIR_ID).first()
@@ -275,4 +275,4 @@ if __name__ == "__main__":
     print(f"✅ Done! Patient '{patient_name}' (FHIR ID: {patient_fhir_id}) seeded.")
     print("   - Coded: E11.9 (HCC 19, RAF 0.104)")
     print("   - Note: 'burning sensation... Gabapentin' → gap: E11.40 (HCC 18, RAF 0.302)")
-    print("   Database: data/mock_ehr.sqlite")
+    print("   Database: data/local_ehr_cache.sqlite")

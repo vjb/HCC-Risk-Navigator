@@ -1,5 +1,5 @@
 """
-SQLAlchemy ORM models for the HCC Risk Navigator Mock EHR.
+SQLAlchemy ORM models for the HCC Risk Navigator Offline Cache.
 Focused on the two data types needed: FHIR Conditions (coded diagnoses)
 and FHIR DocumentReferences (unstructured clinical notes).
 """

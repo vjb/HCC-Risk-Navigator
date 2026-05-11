@@ -14,7 +14,7 @@ from sqlalchemy.orm import sessionmaker, Session
 load_dotenv()
 
 # Default to local SQLite; override via DATABASE_URL env var
-_DEFAULT_DB = "sqlite:///data/mock_ehr.sqlite"
+_DEFAULT_DB = "sqlite:///data/local_ehr_cache.sqlite"
 DATABASE_URL: str = os.getenv("DATABASE_URL", _DEFAULT_DB)
 
 # Ensure the data/ directory exists for SQLite file-based DBs

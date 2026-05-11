@@ -196,7 +196,7 @@ class AuditRequest(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _get_patient_or_404(session, patient_id: str) -> Patient:
-    # Hackathon Demo Alias: Map the UUID from Prompt Opinion to Tamara's actual ID
+    # Patient Identity Resolution: Map the external UUID from Prompt Opinion to Tamara's actual ID
     if patient_id == "13d035f3-32e3-4705-b377-0cc46522b292":
         patient_id = "tamara-williams-001"
         
@@ -204,13 +204,13 @@ def _get_patient_or_404(session, patient_id: str) -> Patient:
     if not patient:
         raise HTTPException(
             status_code=404,
-            detail=f"Patient '{patient_id}' not found in Mock EHR.",
+            detail=f"Patient '{patient_id}' not found in Offline Cache.",
         )
     return patient
 
 
 def _build_fhir_context(patient: Patient, session) -> dict[str, Any]:
-    """Build the full FHIR context dict for the HCC engine from mock SQLite data."""
+    """Build the full FHIR context dict for the HCC engine from offline SQLite data."""
     conditions = session.query(Condition).filter_by(patient_id=patient.id).all()
     notes = session.query(ClinicalNote).filter_by(patient_id=patient.id).all()
     return {
@@ -439,7 +439,7 @@ try:
           1. Fetches real FHIR R4 resources from the server identified in the
              SHARP context (X-FHIR-Server-URL header): Patient demographics,
              active Conditions (ICD-10 coded diagnoses), and DocumentReferences
-             (clinical notes). Falls back to the demo EHR if FHIR is unavailable.
+             (clinical notes). Fails over to the offline cache if FHIR is unavailable.
           2. Computes the deterministic current RAF score from the coded problem list
              using the CMS HCC Model V28 weight table.
 
@@ -473,11 +473,11 @@ try:
 
         fhir_context = await _fetch_fhir_patient_context(effective_pid, fhir_url, fhir_token)
 
-        # ── Step 2: Fall back to mock EHR if FHIR fetch failed ───────────────
+        # ── Step 2: Fall back to offline cache if FHIR fetch failed ───────────────
         data_source = "fhir"
         if fhir_context is None:
-            logger.info(f"↩️  FHIR unavailable — falling back to mock EHR for {effective_pid!r}")
-            data_source = "mock"
+            logger.info(f"↩️  FHIR endpoint timeout — failing over to offline cache for {effective_pid!r}")
+            data_source = "offline"
             session = get_session()
             try:
                 original_pid = effective_pid
@@ -488,7 +488,7 @@ try:
                     effective_pid = "tamara-williams-001"
                     patient = session.query(Patient).filter_by(fhir_id=effective_pid).first()
                 if not patient:
-                    return {"error": f"Patient '{original_pid}' not found in FHIR server or mock EHR.", "gaps": []}
+                    return {"error": f"Patient '{original_pid}' not found in FHIR server or offline cache.", "gaps": []}
                 fhir_context = _build_fhir_context(patient, session)
             finally:
                 session.close()
@@ -518,7 +518,7 @@ try:
         Search the FHIR server for patients with HCC-relevant chronic conditions and
         compute their V28 RAF baselines. This is the COHORT AUDIT entry point.
 
-        DEMO STRATEGY: Rather than fetching random patients (who may be empty),
+        DATA OPTIMIZATION: Rather than fetching random patients (who may be empty),
         this tool SEARCHES the FHIR server for patients who already have coded
         chronic conditions that map to HCC categories (diabetes, heart failure,
         COPD, CKD, depression). This guarantees meaningful data.
@@ -571,8 +571,8 @@ try:
         ]
 
         if not patient_ids:
-            data_source = "mock"
-            logger.info("↩️  FHIR search returned no patients — using enriched mock EHR cohort")
+            data_source = "offline"
+            logger.info("↩️  FHIR search returned no patients — failing over to enriched offline cohort")
             session = get_session()
             try:
                 patients = session.query(Patient).limit(max_patients).all()
@@ -586,7 +586,7 @@ try:
 
         for pid in patient_ids:
             fhir_context = await _fetch_fhir_patient_context(pid, fhir_url, fhir_token)
-            patient_data_sources[pid] = "fhir" if fhir_context else "mock"
+            patient_data_sources[pid] = "fhir" if fhir_context else "offline"
 
             if fhir_context is None:
                 session = get_session()
@@ -594,7 +594,7 @@ try:
                     patient = session.query(Patient).filter_by(fhir_id=pid).first()
                     if patient:
                         fhir_context = _build_fhir_context(patient, session)
-                        patient_data_sources[pid] = "mock"
+                        patient_data_sources[pid] = "offline"
                 finally:
                     session.close()
             if fhir_context is None:

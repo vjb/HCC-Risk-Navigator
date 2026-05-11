@@ -30,7 +30,7 @@ def streamlit_server():
     Start Streamlit in a subprocess for the test session.
     Ensures the db is seeded before launching.
     """
-    env = {**os.environ, "DATABASE_URL": "sqlite:///data/mock_ehr.sqlite"}
+    env = {**os.environ, "DATABASE_URL": "sqlite:///data/local_ehr_cache.sqlite"}
 
     # Initialize and seed
     seed_proc = subprocess.run(
