@@ -10,13 +10,13 @@ During the latest attempts to run the demo on the Prompt Opinion platform, the c
 *   **Risk Navigator Failure**: Failed to analyze Tamara and Maria because it attempted to invoke its own MCP tool to refetch the data from the unstable HAPI FHIR server, rather than relying on the Orchestrator's context.
 *   **Compliance Reviewer Failure**: Rejected all 3 patients, explicitly stating "Lack of clinical documentation" and "Absence of clinical notes."
 
-## Root Cause & The Fix
-The **Primary Clinical Orchestrator** was failing to pass the full FHIR context (specifically the `clinical_notes_text` array) into its messages to the sub-agents. Because the sub-agents were starved of context, they either hallucinated tool calls to refetch the data (Risk Navigator) or outright rejected the workflow (Compliance Reviewer).
+## Root Cause & The Fix (Compliance Handoff Failure)
+The **Primary Clinical Orchestrator** failed the compliance check step because it passed the exact gaps and calculated RAF/revenue data, but it FAILED to pass the `clinical_notes_text` to the Compliance Reviewer. Because the Reviewer lacked the clinical notes, it rejected all patients stating it could not assess M.E.A.T. criteria.
 
 **Proactive Fixes Applied:**
-1.  **Orchestrator Prompt**: I updated `docs/prompts.md` to strictly command the Orchestrator to *extract* the `clinical_notes_text` for ALL flagged patients from the `patient_audits` array and paste the FULL text verbatim into its handoff messages.
-2.  **Risk Navigator Prompt**: I stripped the `audit_hcc_opportunities` tool from the Risk Navigator's instructions and explicitly commanded it to "DO NOT attempt to call external tools to fetch patient data." It must now rely solely on the notes provided in the message.
+1.  **Orchestrator Prompt**: I updated `docs/prompts.md` to strictly command the Orchestrator to *pass the exact gaps, calculated RAF/revenue data, AND the full `clinical_notes_text`* to the Compliance Reviewer.
+2.  **Risk Navigator Math Fix**: I updated the Risk Navigator prompt to explicitly calculate the exact `raf_delta` using the `hcc_reference_v28` table and multiply it by $10,000 for the Revenue Impact.
 
 ## Next Steps upon Session Restart
-1.  **Platform Update**: Copy the newly updated prompts from `docs/prompts.md` and paste them into the Prompt Opinion platform to update the agent configurations.
-2.  **Resume Recording**: Once the agents are updated on the platform, execute the 5-step conversational demo again. The Orchestrator will now correctly pass the raw FHIR text, and the sub-agents will process the data without failing.
+1.  **Platform Update**: Update the "Primary Clinical Orchestrator" agent on the Prompt Opinion platform with the newly updated system prompt.
+2.  **Record E2E Demo**: Execute the 5-step conversational demo end-to-end to verify the Orchestrator successfully passes the clinical notes to the Compliance Reviewer, and the JSON payload is accurately generated.
