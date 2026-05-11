@@ -410,7 +410,7 @@ try:
         enable_dns_rebinding_protection=False,
     )
 
-    # Add PromptOpinion FHIR extension capability via monkey patching create_initialization_options
+    # Add PromptOpinion FHIR extension capability via runtime method overriding
     original_create_init_options = mcp_server._mcp_server.create_initialization_options
     def custom_create_init_options(*args, **kwargs):
         options = original_create_init_options(*args, **kwargs)
