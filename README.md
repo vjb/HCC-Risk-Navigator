@@ -176,7 +176,7 @@ FIRE is rapidly evolving from a retrospective audit tool into an invisible, ambi
 
 1. **Live FHIR Event Subscriptions (Zero-Touch Auditing):** We are transitioning from interactive sequences to an event-driven webhook architecture. FIRE will subscribe to live FHIR `DocumentReference` creation events, autonomously auditing physician notes the exact second they are signed.
 2. **Full-Chart Intelligence:** The underlying vectorstore will be expanded beyond CMS V28 to incorporate standard **CPT codes** (for automated E&M Leveling) and **SDOH Z-codes**. Additionally, we will integrate multi-tenant localized **Payer Contracts** (e.g., UHC vs. Humana rules) to preemptively stop specific claim denials before they happen.
-3. **Closed-Loop EHR Write-Back (The WOW Factor):** Using SMART on FHIR, Phase 2 bypasses standard task managers entirely. FIRE will automatically `POST` verified Physician Queries directly into the doctor's native Epic "In Basket" or Cerner "Message Center" inbox. This embeds the AI seamlessly into the clinician's daily workflow without requiring them to log into a new dashboard.
+3. **Closed-Loop EHR Write-Back:** Using SMART on FHIR, Phase 2 bypasses standard task managers entirely. FIRE will automatically `POST` verified Physician Queries directly into the doctor's native Epic "In Basket" or Cerner "Message Center" inbox. This embeds the AI seamlessly into the clinician's daily workflow without requiring them to log into a new dashboard.
 
 ## Glossary of Terms
 Please refer to the [Glossary of Terms](docs/glossary.md) for definitions of acronyms and regulatory terminology used in this repository.
