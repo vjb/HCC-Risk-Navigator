@@ -88,6 +88,8 @@ The Compliance Reviewer verifies the proposed diagnostic codes against CMS M.E.A
 check with compliance
 ```
 
+![Compliance Verification](assets/step4_compliance.png)
+
 ### Step 5: System Integration and Workflow Hand-Off
 The Orchestrator generates a structured JSON payload containing the verified clinical data and compliance decisions for routing into the hospital's RCM engine.
 
@@ -96,7 +98,59 @@ The Orchestrator generates a structured JSON payload containing the verified cli
 write the json to generate the task in epic in hcls format assign dates two days from now and assign to dr. smith
 ```
 
-![Compliance Verification & JSON Generation](assets/step4_compliance.png)
+**JSON Output Payload:**
+```json
+[
+  {
+    "type": "Task",
+    "title": "Add Diabetic Peripheral Neuropathy Code",
+    "patientId": "132026010",
+    "assignee": "Dr. Smith",
+    "dueDate": "2023-11-05",
+    "priority": "High",
+    "details": {
+      "clinicalEvidence": "Patient presents for routine follow up of type 2 diabetes. Assessment: Diabetic peripheral neuropathy.",
+      "currentCode": "E11.9",
+      "suggestedCode": "E11.40",
+      "rafDelta": 0.198,
+      "revenueImpact": "$1,980",
+      "actionRequired": "Confirm the addition of ICD-10 code E11.40 for Diabetic Peripheral Neuropathy."
+    }
+  },
+  {
+    "type": "Task",
+    "title": "Add COPD with Exacerbation Code",
+    "patientId": "132026013",
+    "assignee": "Dr. Smith",
+    "dueDate": "2023-11-05",
+    "priority": "High",
+    "details": {
+      "clinicalEvidence": "Assessment: Acute exacerbation of COPD.",
+      "currentCode": null,
+      "suggestedCode": "J44.1",
+      "rafDelta": 0.335,
+      "revenueImpact": "$3,350",
+      "actionRequired": "Ensure ICD-10 code J44.1 is included on the active problem list."
+    }
+  },
+  {
+    "type": "Task",
+    "title": "Add Stage 4 CKD Code",
+    "patientId": "132026016",
+    "assignee": "Dr. Smith",
+    "dueDate": "2023-11-05",
+    "priority": "High",
+    "details": {
+      "clinicalEvidence": "Assessment: Stage 4 chronic kidney disease. eGFR of 22 mL/min/1.73m2.",
+      "currentCode": null,
+      "suggestedCode": "N18.4",
+      "rafDelta": 0.421,
+      "revenueImpact": "$4,210",
+      "actionRequired": "Confirm the inclusion of ICD-10 code N18.4 based on documented eGFR levels."
+    }
+  }
+]
+```
 
 ### Step 6: Advanced PubMed Reasoning (Optional)
 The Orchestrator can route complex diagnostic validation requests to the Compliance Reviewer to deeply analyze treatment mechanics using PubMed.
