@@ -3,6 +3,11 @@
 **🎥 [Watch the 3-Minute Hackathon Demo on YouTube](https://www.youtube.com/watch?v=CzJ2mPbhy3A)**  
 **📊 [View the Pitch Deck Presentation](assets/FIRE_FHIR-Integrated%20Revenue%20Engine.pdf)**
 
+### Marketplace Integrations
+* [**FIRE MCP Tool**](https://app.promptopinion.ai/marketplace/mcp/019d39ef-c21c-703d-a526-e8bcaf8b4fb8)
+* [**HCC Risk Navigator Agent**](https://app.promptopinion.ai/marketplace/agent/019d39f2-f707-719a-b3f1-396b997b5f47)
+* [**Compliance Reviewer Agent**](https://app.promptopinion.ai/marketplace/agent/019d39f3-f6da-779b-b85a-ec474cfde56a)
+
 ## Executive Summary
 Manual clinical chart reviews are error-prone and labor-intensive, resulting in millions of dollars of lost revenue due to undocumented Hierarchical Condition Category (HCC) gaps. **FIRE** is an autonomous multi-agent system that interfaces directly with FHIR R4 servers to seamlessly audit patient records, identify hidden conditions, verify them against CMS M.E.A.T. standards, and calculate precise revenue metrics.
 
