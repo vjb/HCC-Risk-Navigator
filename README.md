@@ -167,7 +167,11 @@ write the json to generate the task in epic in hcls format assign dates two days
 ## Glossary of Terms
 Please refer to the [Glossary of Terms](docs/glossary.md) for definitions of acronyms and regulatory terminology used in this repository.
 
-## Phase 2
-* **Event-Driven Architecture**: Subscribing to live `DocumentReference` creation events via webhooks for automated execution.
-* **Scope of Analysis**: Incorporating standard CPT codes for E&M Leveling and SDOH Z-codes.
-* **EHR Write-Back**: Implementing a direct closed-loop SMART on FHIR POST request to the clinician's inbox.
+## Phase 2: The Ambient Revenue Engine (Continuous Integration)
+
+FIRE is rapidly evolving from a retrospective audit tool into an invisible, ambient background process that autonomously secures hospital revenue. Our Phase 2 enterprise roadmap introduces the following scalable integrations:
+
+1. **Live FHIR Event Subscriptions (Zero-Touch Auditing):** We are transitioning from interactive sequences to an event-driven webhook architecture. FIRE will subscribe to live FHIR `DocumentReference` creation events, autonomously auditing physician notes the exact second they are signed.
+2. **Enterprise Identity & Ambient Execution:** By integrating robust OAuth2 capabilities and dynamic token refreshing via identity providers, FIRE will securely traverse the EHR network without human intervention.
+3. **Full-Chart Intelligence:** The underlying vectorstore will be expanded beyond CMS V28 to incorporate standard **CPT codes** (for automated E&M Leveling) and **SDOH Z-codes**. Additionally, we will integrate multi-tenant localized **Payer Contracts** (e.g., UHC vs. Humana rules) to preemptively stop specific claim denials before they happen.
+4. **Closed-Loop EHR Write-Back (The WOW Factor):** Using SMART on FHIR, Phase 2 bypasses standard task managers entirely. FIRE will automatically `POST` verified Physician Queries directly into the doctor's native Epic "In Basket" or Cerner "Message Center" inbox. This embeds the AI seamlessly into the clinician's daily workflow without requiring them to log into a new dashboard.
