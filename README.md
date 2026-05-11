@@ -1,5 +1,8 @@
 # FIRE: FHIR-Integrated Revenue Engine
 
+**🎥 [Watch the 3-Minute Hackathon Demo on YouTube](https://www.youtube.com/watch?v=CzJ2mPbhy3A)**  
+**📊 [View the Pitch Deck Presentation](assets/FIRE_FHIR-Integrated%20Revenue%20Engine.pdf)**
+
 ## Executive Summary
 Manual clinical chart reviews are error-prone and labor-intensive, resulting in millions of dollars of lost revenue due to undocumented Hierarchical Condition Category (HCC) gaps. **FIRE** is an autonomous multi-agent system that interfaces directly with FHIR R4 servers to seamlessly audit patient records, identify hidden conditions, verify them against CMS M.E.A.T. standards, and calculate precise revenue metrics.
 
