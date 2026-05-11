@@ -3,8 +3,21 @@
 ## Architecture Overview
 FIRE is a multi-agent system that interfaces with FHIR R4 servers to audit patient records for CMS V28 HCC coding gaps. The system utilizes an MCP tool for data retrieval and three agents to identify clinical conditions, verify them against CMS M.E.A.T. standards, and calculate revenue metrics.
 
-## Business Case
-FIRE operates on a shared savings model. The system requires minimal upfront SaaS fees, taking exactly 10% of the net new RAF revenue generated from identified and approved coding gaps. This aligns platform incentives with the hospital's financial outcomes.
+## 💰 Market Analysis & Revenue Projections
+To understand the financial scale of this technology, here is a highly conservative market analysis for deploying FIRE at a typical mid-sized regional hospital:
+
+**Conservative Assumptions:**
+* **Medicare Advantage Panel**: 10,000 patients.
+* **Gap Prevalence**: Only 5% of patients (500) have an undocumented HCC gap buried in their unstructured clinical notes.
+* **Average Gap Value**: A minor +0.200 RAF increase per gap (approx. $2,000/yr per patient).
+
+**Hospital Financial Impact:**
+* 500 patients × $2,000 = **$1,000,000 in recovered annual revenue**.
+* Cost to hospital: $0 upfront. No new clinical documentation integrity (CDI) headcount required.
+
+**FIRE Business Model (10% Shared Savings):**
+* $1,000,000 × 10% = **$100,000 Annual Recurring Revenue (ARR)** for FIRE per hospital.
+* Capturing just 10 mid-sized hospitals yields a $1M ARR SaaS business with near-zero marginal cost, as the deterministic multi-agent pipeline operates entirely autonomously.
 
 ## System Integrations
 The FIRE MCP Server and Agents are deployed on the Prompt Opinion platform:
@@ -164,14 +177,13 @@ write the json to generate the task in epic in hcls format assign dates two days
 | [`src/server.py`](src/server.py) | FastMCP Server and Auth | **[Capability Injection (L413-L431)](src/server.py#L413-L431):** Extends the FastMCP initialization options to register the `ai.promptopinion/fhir-context` capability. This authenticates and processes Prompt Opinion's SHARP headers and dynamic FHIR context. |
 | [`src/hcc_engine.py`](src/hcc_engine.py) | Baseline Calculator | **[Raw Context Handoff (L180-L208)](src/hcc_engine.py#L180-L208):** Calculates the baseline mathematically using CMS V28 maps, and packages the raw `clinical_notes_text` array for the Prompt Opinion LLM agent. |
 
-## Glossary of Terms
-Please refer to the [Glossary of Terms](docs/glossary.md) for definitions of acronyms and regulatory terminology used in this repository.
-
 ## Phase 2: The Ambient Revenue Engine (Continuous Integration)
 
 FIRE is rapidly evolving from a retrospective audit tool into an invisible, ambient background process that autonomously secures hospital revenue. Our Phase 2 enterprise roadmap introduces the following scalable integrations:
 
 1. **Live FHIR Event Subscriptions (Zero-Touch Auditing):** We are transitioning from interactive sequences to an event-driven webhook architecture. FIRE will subscribe to live FHIR `DocumentReference` creation events, autonomously auditing physician notes the exact second they are signed.
-2. **Enterprise Identity & Ambient Execution:** By integrating robust OAuth2 capabilities and dynamic token refreshing via identity providers, FIRE will securely traverse the EHR network without human intervention.
-3. **Full-Chart Intelligence:** The underlying vectorstore will be expanded beyond CMS V28 to incorporate standard **CPT codes** (for automated E&M Leveling) and **SDOH Z-codes**. Additionally, we will integrate multi-tenant localized **Payer Contracts** (e.g., UHC vs. Humana rules) to preemptively stop specific claim denials before they happen.
-4. **Closed-Loop EHR Write-Back (The WOW Factor):** Using SMART on FHIR, Phase 2 bypasses standard task managers entirely. FIRE will automatically `POST` verified Physician Queries directly into the doctor's native Epic "In Basket" or Cerner "Message Center" inbox. This embeds the AI seamlessly into the clinician's daily workflow without requiring them to log into a new dashboard.
+2. **Full-Chart Intelligence:** The underlying vectorstore will be expanded beyond CMS V28 to incorporate standard **CPT codes** (for automated E&M Leveling) and **SDOH Z-codes**. Additionally, we will integrate multi-tenant localized **Payer Contracts** (e.g., UHC vs. Humana rules) to preemptively stop specific claim denials before they happen.
+3. **Closed-Loop EHR Write-Back (The WOW Factor):** Using SMART on FHIR, Phase 2 bypasses standard task managers entirely. FIRE will automatically `POST` verified Physician Queries directly into the doctor's native Epic "In Basket" or Cerner "Message Center" inbox. This embeds the AI seamlessly into the clinician's daily workflow without requiring them to log into a new dashboard.
+
+## Glossary of Terms
+Please refer to the [Glossary of Terms](docs/glossary.md) for definitions of acronyms and regulatory terminology used in this repository.
