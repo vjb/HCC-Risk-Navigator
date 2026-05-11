@@ -66,6 +66,8 @@ The Risk Navigator agent cross-references the retrieved clinical text against th
 Run the HCC gap analysis audit on all patients marked ready for audit and list them.
 ```
 
+![Gap Analysis Results](assets/step2_gap_analysis.png)
+
 ### Step 3: RAF Impact Calculation
 The system calculates the exact cumulative Risk Adjustment Factor (RAF) delta across the cohort and projects the corresponding financial impact.
 
@@ -73,6 +75,8 @@ The system calculates the exact cumulative Risk Adjustment Factor (RAF) delta ac
 ```text
 so whats the total raf increase and revenue impact potential?
 ```
+
+![RAF Impact Calculation](assets/step3_raf_impact.png)
 
 ### Step 4: Compliance Verification
 The Compliance Reviewer verifies the proposed diagnostic codes against CMS M.E.A.T. criteria using a native PubMed integration to validate treatment protocols.
@@ -89,6 +93,18 @@ The Orchestrator generates a structured JSON payload containing the verified cli
 ```text
 write the json to generate the task in epic in hcls format assign dates two days from now and assign to dr. smith
 ```
+
+![Compliance Verification & JSON Generation](assets/step4_compliance.png)
+
+### Step 6: Advanced PubMed Reasoning (Optional)
+The Orchestrator can route complex diagnostic validation requests to the Compliance Reviewer to deeply analyze treatment mechanics using PubMed.
+
+**Prompt:**
+```text
+Ask the Compliance Reviewer to provide a deep-dive explanation of the PubMed medical literature supporting the treatment plan for Richard Chen.
+```
+
+![Advanced PubMed Reasoning](assets/advanced_query.png)
 
 ## Core Implementation Files
 
