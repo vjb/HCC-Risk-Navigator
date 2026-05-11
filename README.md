@@ -3,6 +3,9 @@
 ## Architecture Overview
 FIRE is a multi-agent system that interfaces with FHIR R4 servers to audit patient records for CMS V28 HCC coding gaps. The system utilizes an MCP tool for data retrieval and three agents to identify clinical conditions, verify them against CMS M.E.A.T. standards, and calculate revenue metrics.
 
+## Business Case
+FIRE operates on a shared savings model. The system requires minimal upfront SaaS fees, taking exactly 10% of the net new RAF revenue generated from identified and approved coding gaps. This aligns platform incentives with the hospital's financial outcomes.
+
 ## System Integrations
 The FIRE MCP Server and Agents are deployed on the Prompt Opinion platform:
 * [FIRE MCP Tool](https://app.promptopinion.ai/marketplace/mcp/019d39ef-c21c-703d-a526-e8bcaf8b4fb8)
@@ -152,15 +155,7 @@ write the json to generate the task in epic in hcls format assign dates two days
 ]
 ```
 
-### Step 6: Advanced PubMed Reasoning (Optional)
-The Orchestrator can route complex diagnostic validation requests to the Compliance Reviewer to deeply analyze treatment mechanics using PubMed.
 
-**Prompt:**
-```text
-Ask the Compliance Reviewer to provide a deep-dive explanation of the PubMed medical literature supporting the treatment plan for Richard Chen.
-```
-
-![Advanced PubMed Reasoning](assets/advanced_query.png)
 
 ## Core Implementation Files
 
@@ -170,13 +165,7 @@ Ask the Compliance Reviewer to provide a deep-dive explanation of the PubMed med
 | [`src/hcc_engine.py`](src/hcc_engine.py) | Baseline Calculator | **[Raw Context Handoff (L180-L208)](src/hcc_engine.py#L180-L208):** Calculates the baseline mathematically using CMS V28 maps, and packages the raw `clinical_notes_text` array for the Prompt Opinion LLM agent. |
 
 ## Glossary of Terms
-* **FIRE**: FHIR-Integrated Revenue Engine.
-* **FHIR (Fast Healthcare Interoperability Resources)**: API standard for exchanging electronic health records.
-* **ICD-10 Codes**: Alphanumeric codes used to classify diseases, injuries, and symptoms.
-* **HCC (Hierarchical Condition Category)**: A risk-adjustment model used by Medicare.
-* **RAF (Risk Adjustment Factor)**: A patient's cumulative health score, calculated by summing the weights of active HCC codes.
-* **CMS V28**: The current version of the Medicare HCC scoring model.
-* **CMS M.E.A.T. Standards**: Criteria requiring clinical notes to demonstrate Monitoring, Evaluating, Assessing, or Treating a condition.
+Please refer to the [Glossary of Terms](docs/glossary.md) for definitions of acronyms and regulatory terminology used in this repository.
 
 ## Phase 2
 * **Event-Driven Architecture**: Subscribing to live `DocumentReference` creation events via webhooks for automated execution.
