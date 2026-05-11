@@ -27,7 +27,10 @@ async def run():
         try:
             password_input = page.get_by_placeholder("Password", exact=False)
             await password_input.wait_for(timeout=10000)
-            await password_input.fill("Q&eKE6bEFc5voBdc")
+            password = os.getenv("PROMPT_OPINION_PASSWORD")
+            if not password:
+                raise ValueError("PROMPT_OPINION_PASSWORD environment variable not set")
+            await password_input.fill(password)
             await page.keyboard.press("Enter")
             # Wait for dashboard to load after login
             await page.wait_for_url("**/workspaces/**", timeout=20000)
