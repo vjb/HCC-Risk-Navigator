@@ -1,9 +1,9 @@
 # FIRE: FHIR-Integrated Revenue Engine
 
-## Architecture Overview
-FIRE is a multi-agent system that interfaces with FHIR R4 servers to audit patient records for CMS V28 HCC coding gaps. The system utilizes an MCP tool for data retrieval and three agents to identify clinical conditions, verify them against CMS M.E.A.T. standards, and calculate revenue metrics.
+## Executive Summary
+Manual clinical chart reviews are error-prone and labor-intensive, resulting in millions of dollars of lost revenue due to undocumented Hierarchical Condition Category (HCC) gaps. **FIRE** is an autonomous multi-agent system that interfaces directly with FHIR R4 servers to seamlessly audit patient records, identify hidden conditions, verify them against CMS M.E.A.T. standards, and calculate precise revenue metrics.
 
-## 💰 Market Analysis & Revenue Projections
+## Market Analysis & Revenue Projections
 To understand the financial scale of this technology, here is a highly conservative market analysis for deploying FIRE at a typical mid-sized regional hospital:
 
 **Conservative Assumptions:**
@@ -19,13 +19,11 @@ To understand the financial scale of this technology, here is a highly conservat
 * $1,000,000 × 10% = **$100,000 Annual Recurring Revenue (ARR)** for FIRE per hospital.
 * Capturing just 10 mid-sized hospitals yields a $1M ARR SaaS business with near-zero marginal cost, as the deterministic multi-agent pipeline operates entirely autonomously.
 
-## System Integrations
-The FIRE MCP Server and Agents are deployed on the Prompt Opinion platform:
-* [FIRE MCP Tool](https://app.promptopinion.ai/marketplace/mcp/019d39ef-c21c-703d-a526-e8bcaf8b4fb8)
-* [HCC Risk Navigator Agent](https://app.promptopinion.ai/marketplace/agent/019d39f2-f707-719a-b3f1-396b997b5f47)
-* [Compliance Reviewer Agent](https://app.promptopinion.ai/marketplace/agent/019d39f3-f6da-779b-b85a-ec474cfde56a)
+## Architecture Overview
+FIRE utilizes an MCP tool for deterministic FHIR data retrieval and orchestrates three distinct agents to execute the compliance and coding workflow.
 
-## Technology Stack
+### Technical Foundation
+* **Prompt Opinion Integration:** The FIRE MCP Server and Agents are deployed live on the Prompt Opinion platform.
 * **FHIR R4 Integration**: FIRE queries a public HAPI FHIR server. A test patient record is available here:
   * [View FHIR Patient Resource](https://hapi.fhir.org/baseR4/Patient/132026010)
   * [View FHIR Clinical Note (Base64 Encoded DocumentReference)](https://hapi.fhir.org/baseR4/DocumentReference?subject=Patient/132026010)
@@ -58,10 +56,6 @@ sequenceDiagram
     
     Orch->>RCM: 5. Route Task JSON Payload
 ```
-
-### Agent Configurations
-The agent system prompts for the Orchestrator, Risk Navigator, and Compliance Reviewer are documented here:
-[View Agent System Prompts (`docs/prompts.md`)](docs/prompts.md)
 
 ## Execution Pipeline
 Note: This pipeline can be automated to schedule tasks in an enterprise workflow system. For demonstration purposes, it is executed sequentially to verify outputs.
@@ -168,14 +162,13 @@ write the json to generate the task in epic in hcls format assign dates two days
 ]
 ```
 
+## Source Code & Prompts
 
-
-## Core Implementation Files
-
-| File | Core Purpose | Prompt Opinion Integration Proof |
-|------|--------------|--------------------------------|
-| [`src/server.py`](src/server.py) | FastMCP Server and Auth | **[Capability Injection (L413-L431)](src/server.py#L413-L431):** Extends the FastMCP initialization options to register the `ai.promptopinion/fhir-context` capability. This authenticates and processes Prompt Opinion's SHARP headers and dynamic FHIR context. |
-| [`src/hcc_engine.py`](src/hcc_engine.py) | Baseline Calculator | **[Raw Context Handoff (L180-L208)](src/hcc_engine.py#L180-L208):** Calculates the baseline mathematically using CMS V28 maps, and packages the raw `clinical_notes_text` array for the Prompt Opinion LLM agent. |
+| Component | Link / Proof |
+|-----------|--------------|
+| **Agent Configurations** | [View Agent System Prompts (`docs/prompts.md`)](docs/prompts.md) |
+| **FastMCP Server and Auth** | [`src/server.py`](src/server.py)<br>**[Capability Injection (L413-L431)](src/server.py#L413-L431):** Extends FastMCP to register the `ai.promptopinion/fhir-context` capability. |
+| **Baseline Calculator** | [`src/hcc_engine.py`](src/hcc_engine.py)<br>**[Raw Context Handoff (L180-L208)](src/hcc_engine.py#L180-L208):** Calculates the baseline and packages raw `clinical_notes_text` for the LLM agent. |
 
 ## Phase 2: The Ambient Revenue Engine (Continuous Integration)
 
